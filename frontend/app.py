@@ -236,23 +236,18 @@ with col2:
             category_score = res.get('category_score', 0)
             category_name = res.get('category', 'Desconocido').upper()
             
-            st.markdown(f"""
-            <div class="card">
-                <h3>📂 Clasificación</h3>
-                <p><strong>Categoría:</strong> {category_name}</p>
-                <p><strong>Confianza:</strong> {category_score:.2%}</p>
-            </div>
-            """, unsafe_allow_html=True)
+
+            with st.expander("Clasificación IA", expanded=True):
+                 st.info(f"Categoría: **{res.get('category')}** (Confianza: {res.get('category_score', 0)*100:.1f}%)")
             
-            st.markdown(f"""
-            <div class="card">
-                <h3>📝 Resumen</h3>
-                <p>{res.get('summary', 'No hay resumen disponible.')}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.success("Resumen Generado:")
+            st.write(res.get('summary'))
             
             with st.expander("Ver texto extraído completo"):
-                st.text_area("Texto completo", res.get('full_text', res.get('text_preview', 'No text')), height=300)
+                # Use full_text if available, otherwise text_preview
+                # Using st.text_area for better scrolling of large text
+                full_text = res.get('full_text') or res.get('text_preview', '')
+                st.text_area("Texto", value=full_text, height=300)
 
     else:
         st.info("Sube y analiza un documento para ver los resultados aquí.")

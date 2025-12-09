@@ -50,31 +50,33 @@ async def analyze_document(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # 2. Extract Text
-        print(f"Extracting text from {file.filename}...")
-        text = extract_text_from_pdf(file_path)
+        # 1. ANALYSIS PIPELINE (Gemini Multimodal: OCR + Classify + Summarize)
+        # We skip local extraction and let Gemini see the file directly.
+        print("Sending PDF to Gemini for Full Analysis...")
         
-        if not text or len(text.strip()) < 50:
-             return {"error": "No text extracted. Scanned PDF?", "details": text}
-
-        if text.startswith("Error"):
-            return {"error": text}
-
-        # 3. Gemini Analysis (Classify & Summarize)
-        print(" asking Gemini to analyze...")
+        analysis_result = gemini_service.analyze_pdf(file_path)
         
-        # Run in parallel? sequentially for now is fine for 1.5 Flash speed.
-        classification_result = gemini_service.classify(text)
-        summary = gemini_service.summarize(text)
-        
-        category = classification_result.get("category", "Uncategorized")
-        score = classification_result.get("confidence", 0.0)
+        # Check if it failed
+        if "error" in analysis_result:
+             # Fallback? OR just return error
+             pass 
 
-        # 4. Generate Embeddings & Store
-        print("Generating embeddings...")
+        text = analysis_result.get("full_text_extracted", "")
+        if not text:
+             text = "Texto no encontrado por Gemini."
+             
+        classification = analysis_result.get("classification", {})
+        category = classification.get("category", "Uncategorized")
+        score = classification.get("confidence", 0.0)
+        
+        summary = analysis_result.get("summary", "No summary available.")
+        
+        # 2. Store Result (Embeddings are still local)
+        print("Generating embeddings (Local)...")
+        # Embedding generator needs text. Gemini provides high quality text now.
         vector = embedder.generate(text)
         
-        # 5. Store in FAISS
+        # 3. Store in FAISS
         metadata = {
             "id": file_id,
             "filename": file.filename,
@@ -90,7 +92,8 @@ async def analyze_document(file: UploadFile = File(...)):
             "category": category,
             "category_score": score,
             "summary": summary,
-            "text_preview": text[:500] + "..."
+            "text_preview": text[:500] + "...",
+            "full_text": text
         }
 
     except Exception as e:

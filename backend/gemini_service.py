@@ -3,7 +3,7 @@ import os
 
 # Hardcoded for immediate use as requested. 
 # Ideal: os.getenv("GEMINI_API_KEY")
-API_KEY = "AIzaSyB_GzkU8lg_xxW9vnZaMPbJwsQ40ZtyrZg"
+API_KEY = "AIzaSyCnvMdPIHj00EDAnEb9cJKj9toabvmExFo"
 
 class GeminiService:
     def __init__(self):
@@ -65,3 +65,81 @@ class GeminiService:
         except Exception as e:
             print(f"Gemini Classification Error: {e}")
             return {"category": "Desconocido", "confidence": 0.0, "reasoning": "Error en API"}
+
+    def analyze_pdf(self, file_path: str) -> dict:
+        """
+        Uploads PDF to Gemini and performs Full Analysis (Extraction + Classification + Summary).
+        Single API call for maximum efficiency and completeness.
+        """
+        import time
+        
+        try:
+            print(f"Uploading {file_path} to Gemini...")
+            # 1. Upload File
+            pdf_file = genai.upload_file(file_path, mime_type="application/pdf")
+            
+            # Wait for processing (usually instant for small files)
+            while pdf_file.state.name == "PROCESSING":
+                print("Processing file in Gemini...")
+                time.sleep(2)
+                pdf_file = genai.get_file(pdf_file.name)
+
+            if pdf_file.state.name == "FAILED":
+                raise ValueError("Gemini failed to process the PDF file.")
+
+            print("File ready. Generating content...")
+
+            # 2. Generate Content (Multimodal)
+            prompt = """
+            Actúa como un sistema experto de procesamiento de documentos (OCR + IA).
+            Tu tarea es analizar este archivo PDF y extraer toda la información en un formato estructurado.
+            
+            REALIZA ESTAS 3 TAREAS:
+            1. **EXTRACCIÓN**: Extrae TODO el texto visible del documento. Si hay tablas, intenta representarlas con texto claro.
+            2. **CLASIFICACIÓN**: Determina la categoría del documento. **IMPORTANTE: Debes dar el nombre de la categoría EXCLUSIVAMENTE EN ESPAÑOL**. (Ej: "Acuerdo de Empleabilidad", "Contrato Legal").
+            3. **RESUMEN**: Genera un resumen ejecutivo en español.
+            
+            Responde ÚNICAMENTE con este JSON:
+            {
+                "full_text_extracted": "El texto completo del PDF aquí...",
+                "classification": {
+                    "category": "Nombre Categoría",
+                    "confidence": 0.95
+                },
+                "summary": "Resumen aquí..."
+            }
+            """
+            
+            # Helper for retries on 429
+            for attempt in range(3):
+                try:
+                    response = self.model.generate_content(
+                        [pdf_file, prompt], 
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    
+                    import json
+                    result = json.loads(response.text)
+                    
+                    # Cleanup (Optional but good for privacy/storage)
+                    # pdf_file.delete() 
+                    return result
+                    
+                except Exception as e:
+                    if "429" in str(e):
+                        wait_time = 10 * (attempt + 1)
+                        print(f"Rate Limit (429). Waiting {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        raise e
+            
+            return {"error": "Rate Limit Exceeded after retries"}
+
+        except Exception as e:
+            print(f"Gemini Multimodal Error: {e}")
+            return {
+                "full_text_extracted": "", 
+                "classification": {"category": "Error", "confidence": 0.0}, 
+                "summary": f"Error: {str(e)}"
+            }
