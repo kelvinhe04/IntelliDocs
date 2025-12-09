@@ -95,7 +95,11 @@ class GeminiService:
             Tu tarea es analizar este archivo PDF y extraer toda la información en un formato estructurado.
             
             REALIZA ESTAS 3 TAREAS:
-            1. **EXTRACCIÓN**: Extrae TODO el texto visible del documento. Si hay tablas, intenta representarlas con texto claro.
+            1. **EXTRACCIÓN INTELIGENTE**: Convierte el contenido visual del documento a **Markdown bien estructurado**.
+               - LEE EN ORDEN LÓGICO: Si hay columnas, lee columna por columna. No mezcles texto.
+               - DIAGRAMAS: Si hay diagramas o diapositivas, agrupa el texto de forma coherente. Si describes una imagen, HAZLO EN ESPAÑOL.
+               - FORMATO: Usa Títulos (#), Listas (-) y Tablas de MD para mantener la estructura visual.
+               - IDIOMA: Todo el contenido generado (descripciones, etiquetas inferidas) debe estar en ESPAÑOL.
             2. **CLASIFICACIÓN**: Determina la categoría del documento. **IMPORTANTE: Debes dar el nombre de la categoría EXCLUSIVAMENTE EN ESPAÑOL**. (Ej: "Acuerdo de Empleabilidad", "Contrato Legal").
             3. **RESUMEN**: Genera un resumen ejecutivo en español.
             
