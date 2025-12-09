@@ -3,7 +3,7 @@ import os
 
 # Hardcoded for immediate use as requested. 
 # Ideal: os.getenv("GEMINI_API_KEY")
-API_KEY = "AIzaSyCnvMdPIHj00EDAnEb9cJKj9toabvmExFo"
+API_KEY = "AIzaSyCzol-Of6xcA9fiLJ-PpX90_JVffbtgHHw"
 
 class GeminiService:
     def __init__(self):

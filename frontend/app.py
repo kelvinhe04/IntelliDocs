@@ -202,9 +202,14 @@ with st.sidebar:
 # Main Area - Side-by-Side optimized with large gap
 col1, col2 = st.columns([1, 1], gap="large")
 
+# Callback to clear results when file changes
+def reset_analysis():
+    if 'analysis_result' in st.session_state:
+        del st.session_state['analysis_result']
+
 with col1:
     st.subheader("📤 Cargar Documento")
-    uploaded_file = st.file_uploader("Elige un archivo PDF", type="pdf")
+    uploaded_file = st.file_uploader("Elige un archivo PDF", type="pdf", on_change=reset_analysis)
 
     if uploaded_file is None and 'analysis_result' in st.session_state:
         del st.session_state['analysis_result']
