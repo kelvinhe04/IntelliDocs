@@ -1,0 +1,29 @@
+Loading VectorStore...
+Index total: 23
+Metadata len: 23
+
+--- Testing Search for 'Kelvin' ---
+Loading embedding model: all-MiniLM-L6-v2...
+DEBUG: Search indices: [[ 4  5  6  7  8  9 11 14 15 16]]
+DEBUG: Index 4 (order-confirmation.pdf) - Path: data/uploads\c8672a60-1983-4b25-858c-1280663caf7d.pdf - Exists: False
+DEBUG: Index 5 (order-confirmation.pdf) - Path: data/uploads\7e26a583-8178-4654-8fc5-ccc871ad4cfc.pdf - Exists: False
+DEBUG: Index 6 (order-confirmation.pdf) - Path: data/uploads\0fa5508e-6ed8-4409-8125-40fe45bf5d5d.pdf - Exists: False
+DEBUG: Index 7 (order-confirmation.pdf) - Path: data/uploads\84bb54c5-7735-4734-a4b5-3fda4e3e468c.pdf - Exists: False
+DEBUG: Index 8 (order-confirmation.pdf) - Path: data/uploads\9536dc9e-19ff-4c1e-ac84-d7d5809e3d11.pdf - Exists: True
+DEBUG: Index 9 (order-confirmation.pdf) - Path: data/uploads\bc36c5dc-6b1b-4749-b513-670adc019034.pdf - Exists: True
+DEBUG: Index 11 (order-confirmation.pdf) - Path: data/uploads\cdf0bf0e-a6dd-4f0e-a495-21624cb700e6.pdf - Exists: True
+DEBUG: Index 14 (order-confirmation.pdf) - Path: data/uploads\862f38d0-57ad-4599-80cd-322795fd0b10.pdf - Exists: True
+DEBUG: Index 15 (order-confirmation.pdf) - Path: data/uploads\d553b1e5-49b8-4c89-8bb5-4d27630b0d59.pdf - Exists: True
+DEBUG: Index 16 (order-confirmation.pdf) - Path: data/uploads\946afced-6f07-40f4-8834-238f489adca0.pdf - Exists: True
+Found 6 results:
+ - order-confirmation.pdf (Score: 1.1616)
+ - order-confirmation.pdf (Score: 1.1616)
+ - order-confirmation.pdf (Score: 1.1616)
+ - order-confirmation.pdf (Score: 1.1616)
+ - order-confirmation.pdf (Score: 1.1616)
+ - order-confirmation.pdf (Score: 1.1616)
+
+--- Inspecting Index 22 (CV) ---
+Filename: Kelvin_He_CV_ES.pdf
+Summary: Kelvin He es un estudiante de desarrollo de software de la Universidad Tecnológica de Panamá (UTP, por sus siglas en inglés).
+Path: data/uploads\8a545955-898f-43e4-b12d-e8f3e1731bcd.pdf
