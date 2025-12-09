@@ -114,16 +114,34 @@ class GeminiService:
             }
             """
             
+            # Safety Settings (Disable strict blocking to avoid false positives on documents)
+            safety = {
+                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+            }
+
             # Helper for retries on 429
             for attempt in range(3):
                 try:
                     response = self.model.generate_content(
                         [pdf_file, prompt], 
-                        generation_config={"response_mime_type": "application/json"}
+                        generation_config={"response_mime_type": "application/json"},
+                        safety_settings=safety
                     )
                     
                     import json
-                    result = json.loads(response.text)
+                    text_resp = response.text.strip()
+                    # Clean markdown if present
+                    if text_resp.startswith("```json"):
+                        text_resp = text_resp[7:]
+                    if text_resp.startswith("```"):
+                        text_resp = text_resp[3:]
+                    if text_resp.endswith("```"):
+                        text_resp = text_resp[:-3]
+                        
+                    result = json.loads(text_resp)
                     
                     # Cleanup (Optional but good for privacy/storage)
                     # pdf_file.delete() 
@@ -135,7 +153,11 @@ class GeminiService:
                         print(f"Rate Limit (429). Waiting {wait_time}s...")
                         time.sleep(wait_time)
                         continue
-                    else:
+                    # Handle raw ValueError if JSON is bad
+                    if "JSON" in str(e):
+                         print(f"JSON Parsing failed: {response.text[:100]}...")
+                         
+                    if attempt == 2: # Last attempt
                         raise e
             
             return {"error": "Rate Limit Exceeded after retries"}
