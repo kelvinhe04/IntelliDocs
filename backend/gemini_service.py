@@ -36,41 +36,22 @@ class GeminiService:
 
     def classify(self, text: str) -> dict:
         """
-        Classifies the document into a business category and provides a confidence score.
+        Classifies the document into a dynamic business category.
         """
-        categories = [
-            "Contrato o Acuerdo Legal / Legal Contract", 
-            "Factura o Reporte Financiero / Financial Invoice", 
-            "Recibo o Comprobante de Pago / Receipt",
-            "Hoja de Vida o CV / Resume", 
-            "Manual Técnico o Guía de Usuario / Technical Manual", 
-            "Documento de Recursos Humanos / HR Document", 
-            "Identificación o Pasaporte / ID or Passport",
-            "Formulario o Solicitud / Application Form",
-            "Marketing y Publicidad / Marketing", 
-            "Operaciones y Logística / Operations", 
-            "Propuesta de Ventas o Cotización / Sales Proposal", 
-            "Documento Administrativo / Administrative",
-            "Acta de Reunión / Meeting Minutes",
-            "Plan de Proyecto o Cronograma / Project Plan",
-            "Presentación o Diapositivas / Presentation Slides",
-            "Correo Electrónico o Memo / Email or Memo",
-            "Documento Médico o Receta / Medical Record",
-            "Certificado o Diploma / Certificate",
-            "Investigación o Artículo / Research Paper",
-            "Otro Documento / Other"
-        ]
-        
         try:
             prompt = f"""
-            Analiza el siguiente documento y clasifícalo en EXACTAMENTE UNA de las siguientes categorías:
-            {categories}
+            Analiza el siguiente documento y determina su CATEGORÍA de negocio más profesional y descriptiva.
+            
+            INSTRUCCIONES:
+            1. NO uses una lista predefinida. Genera la categoría que mejor describa este documento específico.
+            2. Usa Español, sé conciso (máximo 3-4 palabras). Ejemplos: "Contrato de Arrendamiento", "Factura de Proveedor", "Informe de Auditoría", "Cédula de Ciudadanía".
+            3. Dame un nivel de confianza (0.0 a 1.0) basado en qué tan claro es el documento.
             
             Responde SOLO con un formato JSON así:
             {{
-                "category": "Nombre de la categoría elegida",
+                "category": "Nombre de la Categoría",
                 "confidence": 0.95,
-                "reasoning": "Breve razón de por qué"
+                "reasoning": "Breve razón"
             }}
             
             Texto del documento:
