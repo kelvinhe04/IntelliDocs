@@ -1,20 +1,33 @@
 from transformers import pipeline
 
 class DocumentClassifier:
-    def __init__(self, model_name="facebook/bart-large-mnli"):
+    def __init__(self, model_name="joeddav/xlm-roberta-large-xnli"):
         print(f"Loading classification model: {model_name}...")
         self.classifier = pipeline("zero-shot-classification", model=model_name)
-        # Expanded categories common in business
+        
+        # Optimized labels for multilingual business context (EN/ES)
+        # Using descriptive phrases helps zero-shot models accuracy.
         self.candidate_labels = [
-            "legal", 
-            "financiero", 
-            "técnico", 
-            "recursos humanos", 
-            "marketing", 
-            "operaciones", 
-            "ventas", 
-            "administrativo",
-            "otros"
+            "Contrato o Acuerdo Legal / Legal Contract", 
+            "Factura o Reporte Financiero / Financial Invoice", 
+            "Recibo o Comprobante de Pago / Receipt",
+            "Hoja de Vida o CV / Resume", 
+            "Manual Técnico o Guía de Usuario / Technical Manual", 
+            "Documento de Recursos Humanos / HR Document", 
+            "Identificación o Pasaporte / ID or Passport",
+            "Formulario o Solicitud / Application Form",
+            "Marketing y Publicidad / Marketing", 
+            "Operaciones y Logística / Operations", 
+            "Propuesta de Ventas o Cotización / Sales Proposal", 
+            "Documento Administrativo / Administrative",
+            "Acta de Reunión / Meeting Minutes",
+            "Plan de Proyecto o Cronograma / Project Plan",
+            "Presentación o Diapositivas / Presentation Slides",
+            "Correo Electrónico o Memo / Email or Memo",
+            "Documento Médico o Receta / Medical Record",
+            "Certificado o Diploma / Certificate",
+            "Investigación o Artículo / Research Paper",
+            "Otro Documento / Other"
         ]
 
     def classify(self, text: str) -> dict:
