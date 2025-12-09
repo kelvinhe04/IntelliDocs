@@ -3,18 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 import uuid
-from typing import List
+import uvicorn
 
-# Import our modules
+# Core Modules
 from extractor import extract_text_from_pdf
-from summarizer import Summarizer
-from classifier import DocumentClassifier
+# REPLACED LOCAL MODELS WITH GEMINI
+from gemini_service import GeminiService
 from embeddings import EmbeddingGenerator
 from vector_store import VectorStore
 
-app = FastAPI(title="Document Analysis API")
+app = FastAPI(title="Document AI API - Gemini Powered")
 
-# Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,75 +22,88 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize modules (load models onc at startup)
-print("Initializing models...")
-summarizer = Summarizer()
-classifier = DocumentClassifier()
-embedder = EmbeddingGenerator()
-vector_store = VectorStore()
-print("Models initialized.")
+# Initialize Services
+print("Initializing AI Services...")
+# 1. Gemini (Reasoning Engine)
+gemini_service = GeminiService()
 
+# 2. Embeddings (Search Engine - Local is faster/cheaper for vectors)
+embedder = EmbeddingGenerator()
+
+# 3. Vector Store
+vector_store = VectorStore()
+print("AI Services Initialized (Gemini + Local Vectors).")
+
+# Ensure directories
 UPLOAD_DIR = "data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
     try:
-        # Save file
+        # 1. Save File
         file_id = str(uuid.uuid4())
-        file_extension = os.path.splitext(file.filename)[1]
-        file_path = os.path.join(UPLOAD_DIR, f"{file_id}{file_extension}")
+        file_ext = file.filename.split(".")[-1]
+        filename = f"{file_id}.{file_ext}"
+        file_path = f"data/uploads/{filename}"
         
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # 1. Extract Text
+        # 2. Extract Text
+        print(f"Extracting text from {file.filename}...")
         text = extract_text_from_pdf(file_path)
-        if not text:
-            return {"error": "Could not extract text from file"}
-            
-        if text.startswith("Error:"):
+        
+        if not text or len(text.strip()) < 50:
+             return {"error": "No text extracted. Scanned PDF?", "details": text}
+
+        if text.startswith("Error"):
             return {"error": text}
-            
-        # 2. Classify
-        classification = classifier.classify(text)
-        category = classification['labels'][0]
-        score = classification['scores'][0]
+
+        # 3. Gemini Analysis (Classify & Summarize)
+        print(" asking Gemini to analyze...")
         
-        # 3. Summarize
-        summary = summarizer.summarize(text)
+        # Run in parallel? sequentially for now is fine for 1.5 Flash speed.
+        classification_result = gemini_service.classify(text)
+        summary = gemini_service.summarize(text)
         
-        # 4. Embed and Store
-        embedding = embedder.generate(text)
+        category = classification_result.get("category", "Uncategorized")
+        score = classification_result.get("confidence", 0.0)
+
+        # 4. Generate Embeddings & Store
+        print("Generating embeddings...")
+        vector = embedder.generate(text)
+        
+        # 5. Store in FAISS
         metadata = {
             "id": file_id,
             "filename": file.filename,
+            "path": file_path,
             "category": category,
             "summary": summary,
-            "path": file_path
+            "deleted": False
         }
-        vector_store.add_document(embedding, metadata)
+        vector_store.add_document(vector, metadata)
         
         return {
             "filename": file.filename,
             "category": category,
             "category_score": score,
             "summary": summary,
-            "category_score": score,
-            "summary": summary,
-            "text_preview": text[:500] + "...",
-            "full_text": text
+            "text_preview": text[:500] + "..."
         }
 
     except Exception as e:
-        print(f"Error processing file: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error: {e}")
+        return {"error": str(e)}
 
 @app.get("/search")
 async def search_documents(query: str):
     try:
+        # Search is Hybrid:
+        # 1. Embed query (Local Model)
         query_embedding = embedder.generate(query)
-        # Pass query text for hybrid search
+        # 2. Search FAISS + Keyword Match
         results = vector_store.search(query_embedding, query_text=query)
         return results
     except Exception as e:
@@ -123,5 +135,4 @@ async def delete_all_documents():
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

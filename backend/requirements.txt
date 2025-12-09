@@ -16,3 +16,4 @@ streamlit
 watchdog
 sentencepiece
 protobuf
+google-generativeai
