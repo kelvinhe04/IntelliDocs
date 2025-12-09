@@ -130,11 +130,16 @@ with st.sidebar:
     with col_hist2:
         if st.button("🗑️ Borrar Todo", type="primary"):
             try:
-                requests.delete(f"{API_URL}/documents")
-                st.session_state['search_results'] = [] # Clear local results
-                st.rerun()
-            except:
-                st.error("Error al borrar todo")
+                res = requests.delete(f"{API_URL}/documents")
+                if res.status_code == 200:
+                     st.session_state['search_results'] = [] # Clear local results
+                     st.rerun()
+                else:
+                     st.error(f"Error: {res.text}")
+            except Exception as e:
+                # Ignore rerun exception if it happens to be caught, although specifically Exception shouldn't catch BaseException (which RerunException is).
+                # But safer to just print e
+                st.error(f"Error de conexión: {e}")
 
     # Fetch docs
     try:
