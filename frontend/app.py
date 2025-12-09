@@ -244,10 +244,16 @@ with col2:
             st.write(res.get('summary'))
             
             with st.expander("Ver texto extraído completo"):
-                # Use full_text if available, otherwise text_preview
-                # Using st.text_area for better scrolling of large text
                 full_text = res.get('full_text') or res.get('text_preview', '')
-                st.text_area("Texto", value=full_text, height=300)
+                
+                tab1, tab2 = st.tabs(["👀 Vista Renderizada", "📝 Código Markdown"])
+                
+                with tab1:
+                    st.info("Aquí ves las tablas y títulos con formato bonito.")
+                    st.markdown(full_text)
+                    
+                with tab2:
+                    st.text_area("Copiar Texto:", value=full_text, height=300)
 
     else:
         st.info("Sube y analiza un documento para ver los resultados aquí.")
