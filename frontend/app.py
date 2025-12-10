@@ -221,32 +221,32 @@ with col1:
     uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis)
 
     if uploaded_file is not None:
+        # Standardize Preview Size: Always use 1/3 of the container width
+        preview_cols = st.columns(3)
+        
         # Show Preview if it's an image
         if "image" in uploaded_file.type:
-             # User requested half size (approx 300px seems reasonable for preview)
-             st.image(uploaded_file, caption="Vista Previa de Imagen", width=300)
+             with preview_cols[0]:
+                 st.image(uploaded_file, caption="Vista Previa de Imagen", use_container_width=True)
         
         elif "pdf" in uploaded_file.type:
              try:
                  with pdfplumber.open(uploaded_file) as pdf:
                      total_pages = len(pdf.pages)
                      if total_pages > 0:
-                         if total_pages == 1:
-                             # Single page: Show like an image (width=300)
-                             page = pdf.pages[0]
-                             im = page.to_image(resolution=100).original
-                             st.image(im, caption="Vista Previa (Portada)", width=300)
-                         else:
-                             # Multi page: Show first 3 pages
-                             preview_count = min(3, total_pages)
+                         # Show up to 3 pages
+                         preview_count = min(3, total_pages)
+                         if total_pages > 1:
                              st.caption(f"📑 Vista Previa (Primeras {preview_count} de {total_pages} páginas)")
+                         else:
+                             st.caption("📑 Vista Previa (Portada)")
                              
-                             cols = st.columns(preview_count)
-                             for i in range(preview_count):
-                                 page = pdf.pages[i]
-                                 im = page.to_image(resolution=100).original
-                                 with cols[i]:
-                                     st.image(im, caption=f"Pág {i+1}", use_container_width=True)
+                         for i in range(preview_count):
+                             page = pdf.pages[i]
+                             # High Res 300 DPI
+                             im = page.to_image(resolution=300).original
+                             with preview_cols[i]:
+                                 st.image(im, caption=f"Pág {i+1}", use_container_width=True)
              except Exception:
                  st.caption("Vista previa no disponible")
 
