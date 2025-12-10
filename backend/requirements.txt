@@ -4,7 +4,6 @@ python-multipart==0.0.9
 torch
 transformers
 sentence-transformers
-pytesseract
 pdfplumber
 Pillow
 faiss-cpu
@@ -14,6 +13,4 @@ python-dotenv
 requests
 streamlit
 watchdog
-sentencepiece
-protobuf
 google-generativeai

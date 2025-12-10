@@ -1,20 +1,29 @@
 import google.generativeai as genai
 import os
 
-# Hardcoded for immediate use as requested. 
-# Ideal: os.getenv("GEMINI_API_KEY")
-API_KEY = "AIzaSyBUB6d1AeqcyJ25TbyohtaIVtpRMj27BLk"
+from dotenv import load_dotenv
+import os
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
+
+# Obtener API Key de forma segura
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    raise ValueError("No se encontró GEMINI_API_KEY en las variables de entorno. Por favor verifica tu archivo .env.")
 
 class GeminiService:
     def __init__(self):
-        print("Initializing Gemini Service...")
+
+        print("Inicializando Servicio Gemini...")
         genai.configure(api_key=API_KEY)
-        # Using the latest available model from list_models()
+        # Usando el último modelo disponible
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         
     def summarize(self, text: str) -> str:
         """
-        Generates a concise summary using Gemini.
+        Genera un resumen conciso usando Gemini.
         """
         try:
             prompt = f"""
@@ -36,7 +45,7 @@ class GeminiService:
 
     def classify(self, text: str) -> dict:
         """
-        Classifies the document into a dynamic business category.
+        Clasifica el documento en una categoría de negocio dinámica.
         """
         try:
             prompt = f"""
@@ -68,27 +77,28 @@ class GeminiService:
 
     def analyze_file(self, file_path: str, mime_type: str = "application/pdf") -> dict:
         """
-        Uploads File (PDF or Image) to Gemini and performs Full Analysis.
+        Sube el archivo (PDF o Imagen) a Gemini y realiza un análisis completo.
         """
         import time
         
         try:
-            print(f"Uploading {file_path} ({mime_type}) to Gemini...")
-            # 1. Upload File
+
+            print(f"Subiendo {file_path} ({mime_type}) a Gemini...")
+            # 1. Subir Archivo
             uploaded_file = genai.upload_file(file_path, mime_type=mime_type)
             
-            # Wait for processing
+            # Esperar procesamiento
             while uploaded_file.state.name == "PROCESSING":
-                print("Processing file in Gemini...")
+                print("Procesando archivo en Gemini...")
                 time.sleep(1)
                 uploaded_file = genai.get_file(uploaded_file.name)
 
             if uploaded_file.state.name == "FAILED":
-                raise ValueError("Gemini failed to process the file.")
+                raise ValueError("Gemini falló al procesar el archivo.")
 
-            print("File ready. Generating content...")
+            print("Archivo listo. Generando contenido...")
 
-            # 2. Generate Content (Multimodal)
+            # 2. Generar Contenido (Multimodal)
             prompt = """
             Actúa como un sistema experto de procesamiento de documentos e imágenes (OCR + IA).
             Tu tarea es analizar este archivo (PDF o Imagen) y extraer toda la información en un formato estructurado.
@@ -113,7 +123,7 @@ class GeminiService:
             }
             """
             
-            # Safety Settings (Disable strict blocking to avoid false positives on documents)
+            # Configuración de Seguridad (Desactivar bloqueo estricto para evitar falsos positivos)
             safety = {
                 "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
                 "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
@@ -121,7 +131,7 @@ class GeminiService:
                 "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
             }
 
-            # Helper for retries on 429
+            # Ayuda para reintentos en error 429
             for attempt in range(3):
                 try:
                     response = self.model.generate_content(
@@ -132,7 +142,7 @@ class GeminiService:
                     
                     import json
                     text_resp = response.text.strip()
-                    # Clean markdown if present
+                    # Limpiar markdown si está presente
                     if text_resp.startswith("```json"):
                         text_resp = text_resp[7:]
                     if text_resp.startswith("```"):
@@ -142,24 +152,24 @@ class GeminiService:
                         
                     result = json.loads(text_resp)
                     
-                    # Cleanup (Optional but good for privacy/storage)
+                    # Limpieza (Opcional pero bueno para privacidad/almacenamiento)
                     # uploaded_file.delete() 
                     return result
                     
                 except Exception as e:
                     if "429" in str(e):
                         wait_time = 10 * (attempt + 1)
-                        print(f"Rate Limit (429). Waiting {wait_time}s...")
+                        print(f"Límite de Tasa (429). Esperando {wait_time}s...")
                         time.sleep(wait_time)
                         continue
-                    # Handle raw ValueError if JSON is bad
+                    # Manejar ValueError crudo si el JSON está mal
                     if "JSON" in str(e):
-                         print(f"JSON Parsing failed: {response.text[:100]}...")
+                         print(f"Fallo al parsear JSON: {response.text[:100]}...")
                          
-                    if attempt == 2: # Last attempt
+                    if attempt == 2: # Último intento
                         raise e
             
-            return {"error": "Rate Limit Exceeded after retries"}
+            return {"error": "Límite de Tasa Excedido después de reintentos"}
 
         except Exception as e:
             print(f"Gemini Multimodal Error: {e}")
@@ -171,14 +181,14 @@ class GeminiService:
 
     def semantic_search_rerank(self, query: str, candidates: list) -> list:
         """
-        Uses Gemini to intelligently re-rank and filter search results.
-        Contextualizes the vector search candidates against the user query.
+        Usa Gemini para re-ordenar y filtrar inteligentemente los resultados de búsqueda.
+        Contextualiza los candidatos de la búsqueda vectorial contra la consulta del usuario.
         """
         if not candidates:
             return []
             
         try:
-            # Prepare the context for Gemini
+            # Preparar el contexto para Gemini
             candidates_text = ""
             import os
             
@@ -186,16 +196,16 @@ class GeminiService:
                 meta = cand.get('metadata', {})
                 file_id = meta.get('id')
                 
-                # Try to load FULL TEXT context
-                content_context = f"Resumen: {meta.get('summary')}" # Default fallback
+                # Intentar cargar contexto de TEXTO COMPLETO
+                content_context = f"Resumen: {meta.get('summary')}" # Fallback por defecto
                 
                 if file_id:
                     txt_path = f"data/uploads/{file_id}.txt"
                     if os.path.exists(txt_path):
                         try:
                             with open(txt_path, "r", encoding="utf-8") as f:
-                                # Read up to 20,000 chars per doc to give deep context but save tokens
-                                # Gemini 2.5 Flash has HUGE context, so we can be generous.
+                                # Leer hasta 20,000 chars por doc para dar contexto profundo pero ahorrar tokens
+                                # Gemini 2.5 Flash tiene contexto ENORME, así que podemos ser generosos.
                                 full_text = f.read(50000) 
                                 content_context = f"CONTENIDO COMPLETO (Extracto):\n{full_text}..."
                         except Exception:
@@ -240,12 +250,12 @@ class GeminiService:
             import json
             evaluation = json.loads(response.text)
             
-            # Reconstruct the results list based on Gemini's ranking
+            # Reconstruir la lista de resultados basada en el ranking de Gemini
             reranked_results = []
             for item in evaluation.get("results", []):
                 idx = item.get("original_index")
                 if idx is not None and 0 <= idx < len(candidates):
-                    # Combine original data with AI reasoning
+                    # Combinar datos originales con razonamiento IA
                     enhanced_cand = candidates[idx]
                     enhanced_cand["ai_reasoning"] = item.get("reasoning")
                     enhanced_cand["ai_score"] = item.get("relevance_score")
@@ -254,6 +264,6 @@ class GeminiService:
             return reranked_results
             
         except Exception as e:
-            print(f"Rerank Error: {e}")
-            # Fallback: Return original candidates
+            print(f"Error de Rerank: {e}")
+            # Fallback: Retornar candidatos originales
             return candidates

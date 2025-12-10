@@ -17,9 +17,9 @@ class VectorStore:
 
     def add_document(self, embedding: np.ndarray, doc_metadata: dict):
         """
-        Adds a document embedding and its metadata to the store.
+        Agrega un embedding de documento y sus metadatos al almacén.
         """
-        # Faiss expects float32
+        # Faiss espera float32
         vector = np.array([embedding]).astype('float32')
         self.index.add(vector)
         self.metadata.append(doc_metadata)
@@ -27,7 +27,7 @@ class VectorStore:
 
     def search(self, query_embedding: np.ndarray, query_text: str = None, k=5):
         """
-        Searches for the k nearest neighbors using Hybrid Search (Vector + Keyword).
+        Busca los k vecinos más cercanos usando Búsqueda Híbrida (Vector + Palabra Clave).
         """
         vector = np.array([query_embedding]).astype('float32')
         distances, indices = self.index.search(vector, k * 2)
@@ -41,7 +41,7 @@ class VectorStore:
         if query_text:
             query_lower = query_text.lower()
             for idx, meta in enumerate(self.metadata):
-                # skip deleted
+                # saltar eliminados
                 if meta.get('deleted'): continue
                 
                 if query_lower in meta['filename'].lower() or \
@@ -55,7 +55,7 @@ class VectorStore:
             if idx >= len(self.metadata): continue
             meta = self.metadata[idx]
             
-            # Check for deleted flag OR missing file
+            # Verificar bandera de eliminado O archivo faltante
             if meta.get('deleted') or not os.path.exists(meta['path']):
                 continue
                 
@@ -76,7 +76,7 @@ class VectorStore:
 
     def list_documents(self):
         """
-        Returns a list of all active documents.
+        Retorna una lista de todos los documentos activos.
         """
         valid_docs = []
         for meta in self.metadata:
@@ -100,49 +100,51 @@ class VectorStore:
                 
     def check_file_exists(self, filename: str) -> bool:
         """
-        Checks if a file with the given filename already exists and is active.
+        Verifica si un archivo con el nombre dado ya existe y está activo.
         """
         for meta in self.metadata:
             if not meta.get('deleted') and meta.get('filename') == filename:
                 return True
         return False
+        
+    def delete_document(self, doc_id: str):
         """
-        Deletes a document by ID.
-        Uses Soft Delete (marking as deleted) to preserve FAISS index alignment.
+        Elimina un documento por ID.
+        Usa Borrado Suave (marcar como eliminado) para preservar la alineación del índice FAISS.
         """
         for i, meta in enumerate(self.metadata):
             if meta.get('id') == doc_id:
-                # 1. Try to remove physical file
+                # 1. Intentar eliminar archivo físico
                 if os.path.exists(meta['path']):
                     try:
                         os.remove(meta['path'])
                     except Exception as e:
-                        print(f"Warning: Could not delete file {meta['path']}: {e}")
+                        print(f"Advertencia: No se pudo eliminar el archivo {meta['path']}: {e}")
                 
-                # 2. Mark as deleted in metadata
+                # 2. Marcar como eliminado en metadatos
                 meta['deleted'] = True
                 
-                # 3. Save metadata
+                # 3. Guardar metadatos
                 self.save()
                 return True
         return False
 
     def _rebuild_index(self):
-        # Deprecated: We don't rebuild index anymore to avoid losing vectors.
-        # We rely on 'deleted' flag filter during search/list.
+        # Obsoleto: Ya no reconstruimos el índice para evitar perder vectores.
+        # Confiamos en el filtro de la bandera 'deleted' durante la búsqueda/listado.
         pass
 
     def clear_all(self):
         """
-        Deletes ALL documents and resets the index.
+        Elimina TODOS los documentos y reinicia el índice.
         """
-        # 1. Delete all files in uploads
+        # 1. Eliminar todos los archivos en uploads
         upload_dir = "data/uploads"
         if os.path.exists(upload_dir):
             for f in os.listdir(upload_dir):
                 os.remove(os.path.join(upload_dir, f))
         
-        # 2. Reset Index and Metadata
+        # 2. Reiniciar Índice y Metadatos
         self.index = faiss.IndexFlatL2(self.dimension)
         self.metadata = []
         self.save()

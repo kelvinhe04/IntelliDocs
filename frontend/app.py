@@ -5,7 +5,7 @@ import time
 import pdfplumber
 from PIL import Image
 
-# Backend API URL
+# URL de API Backend
 API_URL = "http://localhost:8000"
 
 st.set_page_config(
@@ -14,10 +14,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for a premium look
+# CSS Personalizado para apariencia premium
 st.markdown("""
 <style>
-    /* Dark Mode Global */
+    /* Modo Oscuro Global */
     .stApp {
         background-color: #0e1117;
         color: #fafafa;
@@ -25,7 +25,7 @@ st.markdown("""
     .main {
         background-color: #0e1117;
     }
-    /* Buttons */
+    /* Botones */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -42,7 +42,7 @@ st.markdown("""
         transform: scale(1.02);
         box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
     }
-    /* Cards */
+    /* Tarjetas */
     .card {
         padding: 20px;
         background-color: #262730; /* Streamlit Dark Gray */
@@ -58,7 +58,7 @@ st.markdown("""
     strong {
         color: #E0E0E0;
     }
-    /* Title Adjustments */
+    /* Ajustes de Título */
     .block-container {
         padding-top: 1rem;
         padding-bottom: 0rem;
@@ -67,7 +67,7 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* File Uploader Button Animation */
+    /* Animación del Botón de Carga de Archivos */
     [data-testid="stFileUploader"] button {
         transition: all 0.3s ease;
         border: 1px solid #41424C;
@@ -84,7 +84,7 @@ st.markdown("""
 st.title("Análisis Inteligente de Documentos")
 st.markdown("Sube tus documentos (PDF) para análisis automático, resumen y clasificación.")
 
-# Sidebar for Search and History
+# Barra lateral para Búsqueda e Historial
 with st.sidebar:
     st.header("🔍 Búsqueda Semántica")
     st.markdown("Buscar en documentos analizados...")
@@ -103,7 +103,7 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error de conexión: {e}")
 
-    # Display Search Results
+    # Mostrar Resultados de Búsqueda
     if 'search_results' in st.session_state:
         st.subheader("Resultados")
         results = st.session_state['search_results']
@@ -112,9 +112,9 @@ with st.sidebar:
         for item in results:
             meta = item['metadata']
             
-            # Check for AI Reranking Data
+            # Verificar Datos de Reranking IA
             if 'ai_score' in item:
-                # Gemini Rerank Mode
+                # Modo Rerank con Gemini
                 score = item['ai_score']
                 reasoning = item.get('ai_reasoning', '')
                 
@@ -129,9 +129,9 @@ with st.sidebar:
                     st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
             
             else:
-                # Fallback Legacy Mode (L2 Distance)
+                # Modo Legado (Distancia L2)
                 score = item['distance']
-                # Interpret score (lower is better for L2)
+                # Interpretar puntuación (menor es mejor para L2)
                 quality = "Alta" if score < 1.0 else "Media" if score < 1.4 else "Baja"
                 color = "green" if score < 1.0 else "orange" if score < 1.4 else "red"
                 
@@ -143,7 +143,7 @@ with st.sidebar:
     st.markdown("---")
     st.header("📂 Historial")
     
-    # Delete All Callback
+    # Callback para Borrar Todo
     def delete_all_callback():
         try:
             res = requests.delete(f"{API_URL}/documents")
@@ -151,7 +151,7 @@ with st.sidebar:
                  if 'search_results' in st.session_state:
                      del st.session_state['search_results']
                  st.toast("Historial borrado correctamente")
-                 # No sleep needed for callback, toast usually survives or shows up next run
+                 # No se necesita sleep para callback, toast usualmente sobrevive o aparece en la siguiente ejecución
             else:
                  st.error(f"Error: {res.text}")
         except Exception as e:
@@ -161,9 +161,9 @@ with st.sidebar:
     with cols_container:
         st.button("🗑️ Borrar Todo", type="primary", use_container_width=True, on_click=delete_all_callback)
     
-    # Wait for the next run cycle for UI update (implicit in callback)
+    # Esperar el siguiente ciclo de ejecución para actualizar UI (implícito en callback)
 
-    # Fetch docs
+    # Obtener documentos
     try:
         res_docs = requests.get(f"{API_URL}/documents")
         if res_docs.status_code == 200:
@@ -171,16 +171,16 @@ with st.sidebar:
             st.caption(f"Total: {len(docs)} documentos")
             
             if docs:
-                # Map Name -> ID
+                # Mapa Nombre -> ID
                 name_to_id = {d['filename']: d['id'] for d in docs}
                 file_options = list(name_to_id.keys())
                 
-                # Logic to clear selection after delete
+                # Lógica para limpiar selección después de borrar
                 if 'deleted_files' not in st.session_state:
                     st.session_state['deleted_files'] = []
 
-                # Filter options to exclude locally known deleted ones (visual feedback)
-                # But typically st.rerun() will recheck backend.
+                # Filtrar opciones para excluir los conocidos como eliminados localmente (feedback visual)
+                # Pero típicamente st.rerun() volverá a comprobar el backend.
                 
                 selected_filenames = st.multiselect(
                     "Seleccionar documentos para borrar:", 
@@ -207,7 +207,7 @@ with st.sidebar:
                         
                         st.success(f"Proceso finalizado.")
                         time.sleep(1)
-                        # Force reset of multiselect widget
+                        # Forzar reinicio del widget multiselect
                         if "delete_multiselect" in st.session_state:
                             del st.session_state["delete_multiselect"]
                         st.rerun()
@@ -226,10 +226,10 @@ with st.sidebar:
     except Exception as e:
         st.warning(f"Error de conexión: {e}")
 
-# Main Area - Side-by-Side optimized with large gap
+# Área Principal - Lado a Lado optimizado con gran espacio
 col1, col2 = st.columns([1, 1], gap="large")
 
-# Callback to clear results when file changes
+# Callback para limpiar resultados cuando cambia el archivo
 def reset_analysis():
     if 'analysis_result' in st.session_state:
         del st.session_state['analysis_result']
@@ -239,39 +239,39 @@ with col1:
     uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis, key="main_file_uploader")
 
     if uploaded_file is not None:
-        # --- Pre-validation for Duplicates ---
+        # --- Pre-validación de Duplicados ---
         try:
-             # Fetch existing docs to check without hitting backend analysis
+             # Obtener docs existentes para verificar sin golpear el análisis del backend
              doc_res = requests.get(f"{API_URL}/documents")
              if doc_res.status_code == 200:
                  existing_docs = doc_res.json()
                  existing_filenames = [d.get('filename') for d in existing_docs]
                  
                  if uploaded_file.name in existing_filenames:
-                     # CRITICAL FIX:
-                     # Only block if this file is NOT the one we just successfully analyzed and are currently showing.
-                     # This prevents the "Success -> Refresh -> Error" loop.
+                     # ARREGLO CRÍTICO:
+                     # Solo bloquear si este archivo NO es el que acabamos de analizar con éxito y estamos mostrando.
+                     # Esto previene el bucle "Éxito -> Refrescar -> Error".
                      current_result = st.session_state.get('analysis_result', {})
                      is_current_result = current_result.get('filename') == uploaded_file.name
                      
                      if not is_current_result:
                          st.error(f"⚠️ El archivo '{uploaded_file.name}' ya existe en el sistema. Por favor, elimínalo primero o sube uno diferente.")
-                         # Stop execution here (don't show Analyze button)
+                         # Detener ejecución aquí (no mostrar botón Analizar)
                          st.stop()
         except:
-            pass # Fail open if backend is unreachable, let the main analysis handle it
+            pass # Fallar abierto si el backend es inalcanzable, dejar que el análisis principal lo maneje
 
-        # Ensure stream is at start
+        # Asegurar stream al inicio
         uploaded_file.seek(0)
         
-        # Standardize Preview Size: Always use 1/3 of the container width
+        # Estandarizar Tamaño de Vista Previa: Siempre usar 1/3 del ancho del contenedor
         preview_cols = st.columns(3)
         
-        # Detect Type Robustly
+        # Detectar Tipo Robustamente
         file_type = uploaded_file.type
         file_name = uploaded_file.name.lower()
         
-        # Show Preview if it's an image
+        # Mostrar Vista Previa si es imagen
         if "image" in file_type or any(file_name.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
              with preview_cols[0]:
                  st.image(uploaded_file, caption="Vista Previa de Imagen", use_container_width=True)
@@ -281,7 +281,7 @@ with col1:
                  with pdfplumber.open(uploaded_file) as pdf:
                      total_pages = len(pdf.pages)
                      if total_pages > 0:
-                         # Show up to 3 pages
+                         # Mostrar hasta 3 páginas
                          preview_count = min(3, total_pages)
                          if total_pages > 1:
                              st.caption(f"📑 Vista Previa (Primeras {preview_count} de {total_pages} páginas)")
@@ -290,7 +290,7 @@ with col1:
                              
                          for i in range(preview_count):
                              page = pdf.pages[i]
-                             # High Res 300 DPI
+                             # Alta Res 300 DPI
                              im = page.to_image(resolution=300).original
                              with preview_cols[i]:
                                  st.image(im, caption=f"Pág {i+1}", use_container_width=True)
@@ -318,10 +318,10 @@ with col1:
                 except Exception as e:
                     st.error(f"Error conectando al backend: {e}")
 
-            # Outside Spinner
+            # Fuera del Spinner
             if data:
-                 # Ensure we only show success if data was actually loaded in this run
-                 st.session_state['just_analyzed'] = True # Optional flag if we want to show a toast later
+                 # Asegurar que solo mostramos éxito si los datos se cargaron realmente en esta ejecución
+                 st.session_state['just_analyzed'] = True # Bandera opcional si queremos mostrar un toast luego
                  st.rerun()
 
 with col2:

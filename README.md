@@ -18,8 +18,8 @@ Este sistema es una solución de vanguardia para el análisis de documentos e im
 /
 ├── backend/                # El "Cerebro" del sistema
 │   ├── main.py             # API Principal (FastAPI)
-│   ├── gemini_service.py   # Integración con Google Gemini (Vision + Search)
-│   ├── vector_store.py     # Base de datos vectorial (FAISS) + Gestión de Duplicados
+│   ├── gemini_service.py   # Integración Gemini (Vision + Search)
+│   ├── vector_store.py     # Base de datos vectorial (FAISS)
 │   ├── embeddings.py       # Generador de Embeddings Locales
 │   └── requirements.txt    # Todas las dependencias (Backend + Frontend)
 │
@@ -32,37 +32,64 @@ Este sistema es una solución de vanguardia para el análisis de documentos e im
 └── README.md
 ```
 
-## 🛠️ Requisitos e Instalación
+## 🛠️ Instalación y Configuración
+> **¡Importante!** Sigue estos pasos para aislar el proyecto y que todo funcione perfecto.
 
-Necesitas tener **Python 3.10+** instalado.
+### 1️⃣ Crear el Entorno Virtual (La "Burbuja")
+Esto crea una carpeta `.venv` donde vivirán las librerías del proyecto.
 
-1.  **Clonar/Descargar** este repositorio.
-2.  **Instalar dependencias**:
-    (Todas las librerías necesarias están en `backend/requirements.txt`)
-    ```bash
-    pip install -r backend/requirements.txt
+```bash
+# En la carpeta raíz del proyecto:
+python -m venv .venv
+```
+
+### 2️⃣ Activar el Entorno
+Dependiendo de qué terminal uses, el comando varía:
+
+*   **PowerShell (Windows / VS Code por defecto):**
+    ```powershell
+    .\.venv\Scripts\activate
     ```
+*   **Git Bash / Linux / Mac:**
+    ```bash
+    source .venv/Scripts/activate
+    ```
+*(Sabrás que funcionó porque verás `(.venv)` en verde al inicio de tu línea de comandos).*
 
-> **Nota**: Este proyecto usa `google-generativeai`. Asegúrate de tener una API KEY válida configurada en `backend/gemini_service.py`.
+### 3️⃣ Instalar Dependencias
+Una vez activado el entorno, instala todo lo necesario de una sola vez:
+```bash
+pip install -r backend/requirements.txt
+```
+
+### 4️⃣ Configurar la Clave Secreta (API Key)
+Este proyecto necesita una llave de Google Gemini para funcionar.
+1.  **Obtén tu API KEY gratis aquí:** [Google AI Studio](https://aistudio.google.com/app/apikey)
+2.  Copia el archivo de ejemplo:
+    *   Renombra `.env.example` a `.env` (o crea uno nuevo llamado `.env`).
+3.  Edítalo y pega tu clave real:
+    ```env
+    GEMINI_API_KEY=Tu_Clave_Secreta_Aqui
+    ```
+*(El archivo `.env` es ignorado por Git para proteger tu seguridad).*
+
+---
 
 ## ⚡ Guía de Ejecución
 
-Necesitas abrir **DOS terminales** separadas.
+Debes abrir **DOS terminales** (y activar el entorno `.venv` en AMBAS).
 
-### 1️⃣ Terminal 1: Iniciar el Backend (API)
-Aquí corre la lógica pesada.
+### Terminal 1: Iniciar el Backend (Cerebro)
 ```bash
-cd backend
-python main.py
+python backend/main.py
 ```
-*Espera a ver el mensaje: `Application startup complete`.*
+*Espera a ver: `Application startup complete`.*
 
-### 2️⃣ Terminal 2: Iniciar el Frontend (Web)
-Aquí interactúas con el programa.
+### Terminal 2: Iniciar el Frontend (Interfaz)
 ```bash
 streamlit run frontend/app.py
 ```
-*Se abrirá tu navegador automáticamente en `http://localhost:8501`.*
+*Tu navegador se abrirá automáticamente en `http://localhost:8501`.*
 
 ## 🔍 Cómo Usar
 

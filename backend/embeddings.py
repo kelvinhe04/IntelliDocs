@@ -8,7 +8,7 @@ class EmbeddingGenerator:
 
     def generate(self, text: str) -> np.ndarray:
         """
-        Generates an embedding vector for the given text.
+        Genera un vector de embedding para el texto dado.
         """
         return self.model.encode([text])[0]
 
