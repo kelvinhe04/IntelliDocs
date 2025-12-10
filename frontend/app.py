@@ -123,22 +123,24 @@ with st.sidebar:
     st.markdown("---")
     st.header("📂 Historial")
     
-    col_hist1, col_hist2 = st.columns([1,1])
-    with col_hist1:
-        if st.button("🔄 Actualizar"):
-             st.rerun()
-    with col_hist2:
-        if st.button("🗑️ Borrar Todo", type="primary"):
+    cols_container = st.container()
+    with cols_container:
+        # Just the Delete All button, no columns needed or maybe full width
+        if st.button("🗑️ Borrar Todo", type="primary", use_container_width=True):
             try:
                 res = requests.delete(f"{API_URL}/documents")
                 if res.status_code == 200:
-                     st.session_state['search_results'] = [] # Clear local results
+                     # Fully remove state so it doesn't trigger "No results found"
+                     if 'search_results' in st.session_state:
+                         del st.session_state['search_results']
+                     
+                     st.toast("Historial borrado correctamente")
+                     # Short delay to ensure toast is seen, or just rerun
+                     time.sleep(0.5) 
                      st.rerun()
                 else:
                      st.error(f"Error: {res.text}")
             except Exception as e:
-                # Ignore rerun exception if it happens to be caught, although specifically Exception shouldn't catch BaseException (which RerunException is).
-                # But safer to just print e
                 st.error(f"Error de conexión: {e}")
 
     # Fetch docs
