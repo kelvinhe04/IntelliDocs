@@ -125,25 +125,25 @@ with st.sidebar:
     st.markdown("---")
     st.header("📂 Historial")
     
+    # Delete All Callback
+    def delete_all_callback():
+        try:
+            res = requests.delete(f"{API_URL}/documents")
+            if res.status_code == 200:
+                 if 'search_results' in st.session_state:
+                     del st.session_state['search_results']
+                 st.toast("Historial borrado correctamente")
+                 # No sleep needed for callback, toast usually survives or shows up next run
+            else:
+                 st.error(f"Error: {res.text}")
+        except Exception as e:
+            st.error(f"Error de conexión: {e}")
+
     cols_container = st.container()
     with cols_container:
-        # Just the Delete All button, no columns needed or maybe full width
-        if st.button("🗑️ Borrar Todo", type="primary", use_container_width=True):
-            try:
-                res = requests.delete(f"{API_URL}/documents")
-                if res.status_code == 200:
-                     # Fully remove state so it doesn't trigger "No results found"
-                     if 'search_results' in st.session_state:
-                         del st.session_state['search_results']
-                     
-                     st.toast("Historial borrado correctamente")
-                     # Short delay to ensure toast is seen, or just rerun
-                     time.sleep(0.5) 
-                     st.rerun()
-                else:
-                     st.error(f"Error: {res.text}")
-            except Exception as e:
-                st.error(f"Error de conexión: {e}")
+        st.button("🗑️ Borrar Todo", type="primary", use_container_width=True, on_click=delete_all_callback)
+    
+    # Wait for the next run cycle for UI update (implicit in callback)
 
     # Fetch docs
     try:
@@ -218,18 +218,25 @@ def reset_analysis():
 
 with col1:
     st.subheader("📤 Cargar Documento")
-    uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis)
+    uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis, key="main_file_uploader")
 
     if uploaded_file is not None:
+        # Ensure stream is at start
+        uploaded_file.seek(0)
+        
         # Standardize Preview Size: Always use 1/3 of the container width
         preview_cols = st.columns(3)
         
+        # Detect Type Robustly
+        file_type = uploaded_file.type
+        file_name = uploaded_file.name.lower()
+        
         # Show Preview if it's an image
-        if "image" in uploaded_file.type:
+        if "image" in file_type or any(file_name.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
              with preview_cols[0]:
                  st.image(uploaded_file, caption="Vista Previa de Imagen", use_container_width=True)
         
-        elif "pdf" in uploaded_file.type:
+        elif "pdf" in file_type or file_name.endswith('.pdf'):
              try:
                  with pdfplumber.open(uploaded_file) as pdf:
                      total_pages = len(pdf.pages)
