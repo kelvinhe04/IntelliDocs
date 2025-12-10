@@ -221,6 +221,7 @@ with col1:
 
     if uploaded_file is not None:
         if st.button("Analizar Documento"):
+            data = None
             with st.spinner("Procesando documento (Extrayendo, Clasificando, Resumiendo)..."):
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
@@ -229,11 +230,16 @@ with col1:
                     if response.status_code == 200:
                         data = response.json()
                         st.session_state['analysis_result'] = data
-                        st.success("¡Análisis Completado!")
                     else:
                         st.error(f"Falló el análisis: {response.text}")
                 except Exception as e:
                     st.error(f"Error conectando al backend: {e}")
+
+            # Outside Spinner
+            if data:
+                 # Ensure we only show success if data was actually loaded in this run
+                 st.session_state['just_analyzed'] = True # Optional flag if we want to show a toast later
+                 st.rerun()
 
 with col2:
     st.subheader("📊 Resultados del Análisis")

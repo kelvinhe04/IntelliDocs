@@ -10,7 +10,7 @@ class GeminiService:
         print("Initializing Gemini Service...")
         genai.configure(api_key=API_KEY)
         # Using the latest available model from list_models()
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
         
     def summarize(self, text: str) -> str:
         """
