@@ -3,7 +3,7 @@ import os
 
 # Hardcoded for immediate use as requested. 
 # Ideal: os.getenv("GEMINI_API_KEY")
-API_KEY = "AIzaSyAsM8f9G6KOrz7F2RwrxaSTchgCPn1eMjI"
+API_KEY = "AIzaSyDAKPxOdo04HmQwCvSNjuc2cbtDZ2e64_E"
 
 class GeminiService:
     def __init__(self):
@@ -168,3 +168,92 @@ class GeminiService:
                 "classification": {"category": "Error", "confidence": 0.0}, 
                 "summary": f"Error: {str(e)}"
             }
+
+    def semantic_search_rerank(self, query: str, candidates: list) -> list:
+        """
+        Uses Gemini to intelligently re-rank and filter search results.
+        Contextualizes the vector search candidates against the user query.
+        """
+        if not candidates:
+            return []
+            
+        try:
+            # Prepare the context for Gemini
+            candidates_text = ""
+            import os
+            
+            for i, cand in enumerate(candidates):
+                meta = cand.get('metadata', {})
+                file_id = meta.get('id')
+                
+                # Try to load FULL TEXT context
+                content_context = f"Resumen: {meta.get('summary')}" # Default fallback
+                
+                if file_id:
+                    txt_path = f"data/uploads/{file_id}.txt"
+                    if os.path.exists(txt_path):
+                        try:
+                            with open(txt_path, "r", encoding="utf-8") as f:
+                                # Read up to 20,000 chars per doc to give deep context but save tokens
+                                # Gemini 2.5 Flash has HUGE context, so we can be generous.
+                                full_text = f.read(50000) 
+                                content_context = f"CONTENIDO COMPLETO (Extracto):\n{full_text}..."
+                        except Exception:
+                            pass
+
+                candidates_text += f"""
+                [ID: {i}]
+                Archivo: {meta.get('filename')}
+                Categoría: {meta.get('category')}
+                {content_context}
+                -----------------------------------
+                """
+
+            prompt = f"""
+            Actúa como un Motor de Búsqueda Semántica Avanzado.
+            Tu tarea es filtrar y re-ordenar una lista de documentos candidatos basándote en la consulta del usuario.
+            
+            Consulta del Usuario: "{query}"
+            
+            Candidatos encontrados (Búsqueda Vectorial Cruda):
+            {candidates_text}
+            
+            INSTRUCCIONES:
+            1. Analiza la RELEVANCIA REAL de cada documento con respecto a la consulta.
+            2. FILTRA fuera los resultados irrelevantes (ruido).
+            3. ORDENA los restantes por relevancia (de mayor a menor).
+            4. Explica brevemente por qué es relevante.
+            
+            Responde ÚNICAMENTE con este JSON:
+            {{
+                "results": [
+                    {{
+                        "original_index": 0,  // El ID [ID: X] del candidato original
+                        "relevance_score": 0.95, // 0.0 a 1.0
+                        "reasoning": "Explica por qué coincide con la búsqueda"
+                    }}
+                ]
+            }}
+            """
+            
+            response = self.model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            import json
+            evaluation = json.loads(response.text)
+            
+            # Reconstruct the results list based on Gemini's ranking
+            reranked_results = []
+            for item in evaluation.get("results", []):
+                idx = item.get("original_index")
+                if idx is not None and 0 <= idx < len(candidates):
+                    # Combine original data with AI reasoning
+                    enhanced_cand = candidates[idx]
+                    enhanced_cand["ai_reasoning"] = item.get("reasoning")
+                    enhanced_cand["ai_score"] = item.get("relevance_score")
+                    reranked_results.append(enhanced_cand)
+            
+            return reranked_results
+            
+        except Exception as e:
+            print(f"Rerank Error: {e}")
+            # Fallback: Return original candidates
+            return candidates

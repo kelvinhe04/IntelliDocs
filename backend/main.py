@@ -81,6 +81,12 @@ async def analyze_document(file: UploadFile = File(...)):
         
         # 2. Store Result (Embeddings are still local)
         print("Generating embeddings (Local)...")
+        
+        # SAVE FULL TEXT TO DISK for Semantic Search Context
+        txt_path = f"data/uploads/{file_id}.txt"
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(text)
+            
         # Embedding generator needs text. Gemini provides high quality text now.
         vector = embedder.generate(text)
         
@@ -111,12 +117,19 @@ async def analyze_document(file: UploadFile = File(...)):
 @app.get("/search")
 async def search_documents(query: str):
     try:
-        # Search is Hybrid:
+        # Search is Hybrid + Gemini Rerank:
         # 1. Embed query (Local Model)
         query_embedding = embedder.generate(query)
+        
         # 2. Search FAISS + Keyword Match
-        results = vector_store.search(query_embedding, query_text=query)
-        return results
+        # Fetch more candidates (k=15) to give Gemini a good pool to filter from
+        raw_candidates = vector_store.search(query_embedding, query_text=query, k=15)
+        
+        # 3. Gemini Semantic Reranking
+        # Ask Gemini to filter the noise and find the true matches
+        refined_results = gemini_service.semantic_search_rerank(query, raw_candidates)
+        
+        return refined_results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

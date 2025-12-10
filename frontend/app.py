@@ -111,16 +111,34 @@ with st.sidebar:
             st.info("No se encontraron coincidencias.")
         for item in results:
             meta = item['metadata']
-            score = item['distance']
             
-            # Interpret score (lower is better for L2)
-            quality = "Alta" if score < 1.0 else "Media" if score < 1.4 else "Baja"
-            color = "green" if score < 1.0 else "orange" if score < 1.4 else "red"
+            # Check for AI Reranking Data
+            if 'ai_score' in item:
+                # Gemini Rerank Mode
+                score = item['ai_score']
+                reasoning = item.get('ai_reasoning', '')
+                
+                quality = "Alta" if score > 0.8 else "Media" if score > 0.5 else "Baja"
+                color = "green" if score > 0.8 else "orange" if score > 0.5 else "red"
+                
+                with st.expander(f"{meta['filename']} ({int(score*100)}%)"):
+                    st.markdown(f"**Relevancia:** :{color}[{quality}]")
+                    if reasoning:
+                        st.info(f"💡 **Análisis:** {reasoning}")
+                    st.caption(f"Categoría: {meta.get('category', 'N/A')}")
+                    st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
             
-            with st.expander(f"{meta['filename']}"):
-                st.markdown(f"**Coincidencia:** :{color}[{quality} ({int((2-min(score, 2))*50)}%)]")
-                st.caption(f"Categoría: {meta.get('category', 'N/A')}")
-                st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
+            else:
+                # Fallback Legacy Mode (L2 Distance)
+                score = item['distance']
+                # Interpret score (lower is better for L2)
+                quality = "Alta" if score < 1.0 else "Media" if score < 1.4 else "Baja"
+                color = "green" if score < 1.0 else "orange" if score < 1.4 else "red"
+                
+                with st.expander(f"{meta['filename']}"):
+                    st.markdown(f"**Coincidencia Vectorial:** :{color}[{quality} ({int((2-min(score, 2))*50)}%)]")
+                    st.caption(f"Categoría: {meta.get('category', 'N/A')}")
+                    st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
 
     st.markdown("---")
     st.header("📂 Historial")
@@ -293,7 +311,7 @@ with col2:
             category_name = res.get('category', 'Desconocido').upper()
             
 
-            with st.expander("Clasificación IA", expanded=True):
+            with st.expander("Clasificación", expanded=True):
                  st.info(f"Categoría: **{res.get('category')}** (Confianza: {res.get('category_score', 0)*100:.1f}%)")
             
             st.success("Resumen Generado:")
