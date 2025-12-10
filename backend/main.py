@@ -41,6 +41,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
     try:
+        # 0. Check for Duplicates
+        if vector_store.check_file_exists(file.filename):
+             raise HTTPException(status_code=400, detail=f"El archivo '{file.filename}' ya existe en el sistema.")
+             
         # 1. Save File
         file_id = str(uuid.uuid4())
         file_ext = file.filename.split(".")[-1]

@@ -97,7 +97,15 @@ class VectorStore:
                     except Exception as e:
                         print(f"Error removing file {meta['path']}: {e}")
                 
-    def delete_document(self, doc_id: str):
+                
+    def check_file_exists(self, filename: str) -> bool:
+        """
+        Checks if a file with the given filename already exists and is active.
+        """
+        for meta in self.metadata:
+            if not meta.get('deleted') and meta.get('filename') == filename:
+                return True
+        return False
         """
         Deletes a document by ID.
         Uses Soft Delete (marking as deleted) to preserve FAISS index alignment.

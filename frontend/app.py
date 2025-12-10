@@ -239,6 +239,28 @@ with col1:
     uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis, key="main_file_uploader")
 
     if uploaded_file is not None:
+        # --- Pre-validation for Duplicates ---
+        try:
+             # Fetch existing docs to check without hitting backend analysis
+             doc_res = requests.get(f"{API_URL}/documents")
+             if doc_res.status_code == 200:
+                 existing_docs = doc_res.json()
+                 existing_filenames = [d.get('filename') for d in existing_docs]
+                 
+                 if uploaded_file.name in existing_filenames:
+                     # CRITICAL FIX:
+                     # Only block if this file is NOT the one we just successfully analyzed and are currently showing.
+                     # This prevents the "Success -> Refresh -> Error" loop.
+                     current_result = st.session_state.get('analysis_result', {})
+                     is_current_result = current_result.get('filename') == uploaded_file.name
+                     
+                     if not is_current_result:
+                         st.error(f"⚠️ El archivo '{uploaded_file.name}' ya existe en el sistema. Por favor, elimínalo primero o sube uno diferente.")
+                         # Stop execution here (don't show Analyze button)
+                         st.stop()
+        except:
+            pass # Fail open if backend is unreachable, let the main analysis handle it
+
         # Ensure stream is at start
         uploaded_file.seek(0)
         
@@ -288,6 +310,9 @@ with col1:
                     if response.status_code == 200:
                         data = response.json()
                         st.session_state['analysis_result'] = data
+                    elif response.status_code == 400:
+                         # Handle duplicate file error gracefully
+                         st.warning(f"⚠️ {response.json().get('detail')}")
                     else:
                         st.error(f"Falló el análisis: {response.text}")
                 except Exception as e:
