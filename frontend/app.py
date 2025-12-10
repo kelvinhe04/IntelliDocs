@@ -214,17 +214,20 @@ def reset_analysis():
 
 with col1:
     st.subheader("📤 Cargar Documento")
-    uploaded_file = st.file_uploader("Elige un archivo PDF", type="pdf", on_change=reset_analysis)
-
-    if uploaded_file is None and 'analysis_result' in st.session_state:
-        del st.session_state['analysis_result']
+    uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis)
 
     if uploaded_file is not None:
+        # Show Preview if it's an image
+        if "image" in uploaded_file.type:
+             # User requested half size (approx 300px seems reasonable for preview)
+             st.image(uploaded_file, caption="Vista Previa de Imagen", width=300)
+
         if st.button("Analizar Documento"):
             data = None
             with st.spinner("Procesando documento (Extrayendo, Clasificando, Resumiendo)..."):
                 try:
-                    files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
+                    # Dynamically pass the MIME type from Streamlit's detection
+                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
                     response = requests.post(f"{API_URL}/analyze", files=files)
                     
                     if response.status_code == 200:

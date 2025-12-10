@@ -3,14 +3,14 @@ import os
 
 # Hardcoded for immediate use as requested. 
 # Ideal: os.getenv("GEMINI_API_KEY")
-API_KEY = "AIzaSyCzol-Of6xcA9fiLJ-PpX90_JVffbtgHHw"
+API_KEY = "AIzaSyBR1Xkl7P7lG8Y1s3yVMgYU5JeR1_G-9dg"
 
 class GeminiService:
     def __init__(self):
         print("Initializing Gemini Service...")
         genai.configure(api_key=API_KEY)
         # Using the latest available model from list_models()
-        self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
         
     def summarize(self, text: str) -> str:
         """
@@ -66,46 +66,45 @@ class GeminiService:
             print(f"Gemini Classification Error: {e}")
             return {"category": "Desconocido", "confidence": 0.0, "reasoning": "Error en API"}
 
-    def analyze_pdf(self, file_path: str) -> dict:
+    def analyze_file(self, file_path: str, mime_type: str = "application/pdf") -> dict:
         """
-        Uploads PDF to Gemini and performs Full Analysis (Extraction + Classification + Summary).
-        Single API call for maximum efficiency and completeness.
+        Uploads File (PDF or Image) to Gemini and performs Full Analysis.
         """
         import time
         
         try:
-            print(f"Uploading {file_path} to Gemini...")
+            print(f"Uploading {file_path} ({mime_type}) to Gemini...")
             # 1. Upload File
-            pdf_file = genai.upload_file(file_path, mime_type="application/pdf")
+            uploaded_file = genai.upload_file(file_path, mime_type=mime_type)
             
-            # Wait for processing (usually instant for small files)
-            while pdf_file.state.name == "PROCESSING":
+            # Wait for processing
+            while uploaded_file.state.name == "PROCESSING":
                 print("Processing file in Gemini...")
-                time.sleep(2)
-                pdf_file = genai.get_file(pdf_file.name)
+                time.sleep(1)
+                uploaded_file = genai.get_file(uploaded_file.name)
 
-            if pdf_file.state.name == "FAILED":
-                raise ValueError("Gemini failed to process the PDF file.")
+            if uploaded_file.state.name == "FAILED":
+                raise ValueError("Gemini failed to process the file.")
 
             print("File ready. Generating content...")
 
             # 2. Generate Content (Multimodal)
             prompt = """
-            Actúa como un sistema experto de procesamiento de documentos (OCR + IA).
-            Tu tarea es analizar este archivo PDF y extraer toda la información en un formato estructurado.
+            Actúa como un sistema experto de procesamiento de documentos e imágenes (OCR + IA).
+            Tu tarea es analizar este archivo (PDF o Imagen) y extraer toda la información en un formato estructurado.
             
             REALIZA ESTAS 3 TAREAS:
-            1. **EXTRACCIÓN INTELIGENTE**: Convierte el contenido visual del documento a **Markdown bien estructurado**.
-               - LEE EN ORDEN LÓGICO: Si hay columnas, lee columna por columna. No mezcles texto.
-               - DIAGRAMAS: Si hay diagramas o diapositivas, agrupa el texto de forma coherente. Si describes una imagen, HAZLO EN ESPAÑOL.
-               - FORMATO: Usa Títulos (#), Listas (-) y Tablas de MD para mantener la estructura visual.
-               - IDIOMA: Todo el contenido generado (descripciones, etiquetas inferidas) debe estar en ESPAÑOL.
-            2. **CLASIFICACIÓN**: Determina la categoría del documento. **IMPORTANTE: Debes dar el nombre de la categoría EXCLUSIVAMENTE EN ESPAÑOL**. (Ej: "Acuerdo de Empleabilidad", "Contrato Legal").
+            1. **EXTRACCIÓN INTELIGENTE**: 
+               - Si es PDF: Convierte el contenido visual a **Markdown**.
+               - Si es IMAGEN: Describe detalladamente el contenido visual (texto, tablas, diagramas, escenas) en **Markdown**.
+               - LEE EN ORDEN LÓGICO.
+               - IDIOMA: Todo el contenido generado debe estar en ESPAÑOL.
+            2. **CLASIFICACIÓN**: Determina la categoría del documento/imagen. **IMPORTANTE: Debes dar el nombre de la categoría EXCLUSIVAMENTE EN ESPAÑOL**.
             3. **RESUMEN**: Genera un resumen ejecutivo en español.
             
             Responde ÚNICAMENTE con este JSON:
             {
-                "full_text_extracted": "El texto completo del PDF aquí...",
+                "full_text_extracted": "El texto/descripción completa aquí...",
                 "classification": {
                     "category": "Nombre Categoría",
                     "confidence": 0.95
@@ -126,7 +125,7 @@ class GeminiService:
             for attempt in range(3):
                 try:
                     response = self.model.generate_content(
-                        [pdf_file, prompt], 
+                        [uploaded_file, prompt], 
                         generation_config={"response_mime_type": "application/json"},
                         safety_settings=safety
                     )
@@ -144,7 +143,7 @@ class GeminiService:
                     result = json.loads(text_resp)
                     
                     # Cleanup (Optional but good for privacy/storage)
-                    # pdf_file.delete() 
+                    # uploaded_file.delete() 
                     return result
                     
                 except Exception as e:

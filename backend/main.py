@@ -51,10 +51,18 @@ async def analyze_document(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, buffer)
             
         # 1. ANALYSIS PIPELINE (Gemini Multimodal: OCR + Classify + Summarize)
-        # We skip local extraction and let Gemini see the file directly.
-        print("Sending PDF to Gemini for Full Analysis...")
         
-        analysis_result = gemini_service.analyze_pdf(file_path)
+        # Detect MIME Type
+        mime_type = file.content_type
+        if not mime_type or mime_type == "application/octet-stream":
+             if file_ext in ["jpg", "jpeg"]: mime_type = "image/jpeg"
+             elif file_ext == "png": mime_type = "image/png"
+             elif file_ext == "webp": mime_type = "image/webp"
+             else: mime_type = "application/pdf"
+             
+        print(f"Sending {filename} ({mime_type}) to Gemini for Full Analysis...")
+        
+        analysis_result = gemini_service.analyze_file(file_path, mime_type=mime_type)
         
         # Check if it failed
         if "error" in analysis_result:
