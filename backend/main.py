@@ -6,7 +6,7 @@ import uuid
 import uvicorn
 
 # Core Modules
-from extractor import extract_text_from_pdf
+# from extractor import extract_text_from_pdf
 # REPLACED LOCAL MODELS WITH GEMINI
 from gemini_service import GeminiService
 from embeddings import EmbeddingGenerator
