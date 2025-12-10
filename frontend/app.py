@@ -9,8 +9,8 @@ from PIL import Image
 API_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="Análisis Inteligente de Documentos",
-    page_icon="📄",
+    page_title="Análisis Multimodal de Archivos",
+    page_icon="🧠",
     layout="wide"
 )
 
@@ -81,14 +81,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Análisis Inteligente de Documentos")
-st.markdown("Sube tus documentos (PDF) para análisis automático, resumen y clasificación.")
+st.markdown("""
+    <h1 style='display: flex; align-items: center; gap: 0px; margin-top: 20px;'>
+        <div style='font-size: 1.2em; margin-right: 8px; margin-left: -5px;'>🧠</div> Análisis Multimodal de Archivos
+    </h1>
+""", unsafe_allow_html=True)
+st.markdown("Sube **PDFs, Imágenes o Fotos** para que la IA los analice, clasifique y extraiga su información.")
 
 # Barra lateral para Búsqueda e Historial
 with st.sidebar:
-    st.header("🔍 Búsqueda Semántica")
-    st.markdown("Buscar en documentos analizados...")
-    search_query = st.text_input("", placeholder="Ej: contrato, factura...")
+    st.header("🔍 Búsqueda & Razonamiento")
+    st.markdown("Haz preguntas complejas sobre tus archivos. La IA entiende el contexto visual y textual.")
+    search_query = st.text_input("", placeholder="Ej: ¿Qué coche es rojo? o Busca facturas de >$100")
+    st.caption("💡 Truco: Puedes buscar por conceptos visuales, valores numéricos o texto específico.")
     
     if st.button("Buscar"):
         if search_query:
@@ -216,8 +221,21 @@ with st.sidebar:
                 
                 # List details below
                 with st.expander("Ver detalles de todos"):
-                    for doc in docs:
-                         st.caption(f"📄 {doc['filename']} ({doc.get('category', 'N/A')})")
+                    for i, doc in enumerate(docs):
+                        st.markdown(f"""
+                        <div style="margin-bottom: 2px; font-weight: 600; display: flex; align-items: flex-start; gap: 6px;">
+                            <span style="min-width: 1.2em;">📄</span>
+                            <span style="word-break: break-word; line-height: 1.2;">{doc['filename']}</span>
+                        </div>
+                        <div style="font-size: 0.85em; color: #aaa; margin-bottom: 5px; display: flex; align-items: center; gap: 4px;">
+                            <span style="position: relative; top: -2px;">📂</span> <span>{doc.get('category', 'N/A')}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.info(doc.get('summary', 'Sin resumen disponible.'))
+                        
+                        # Only show separator if it's not the last item
+                        if i < len(docs) - 1:
+                            st.markdown("<hr style='margin: 5px 0; border-color: #41424C; opacity: 0.6;'>", unsafe_allow_html=True)
             else:
                 st.info("El historial está vacío.")
 
@@ -235,7 +253,11 @@ def reset_analysis():
         del st.session_state['analysis_result']
 
 with col1:
-    st.subheader("📤 Cargar Documento")
+    st.markdown("""
+        <h3 style='display: flex; align-items: center; gap: 8px; margin-bottom: 5px;'>
+            <div style='margin-left: -5px;'>📤</div> Cargar Documento
+        </h3>
+    """, unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis, key="main_file_uploader")
 
     if uploaded_file is not None:
@@ -297,7 +319,26 @@ with col1:
              except Exception:
                  st.caption("Vista previa no disponible")
 
-        if st.button("Analizar Documento"):
+        # Verificar si ya tenemos resultados para ESTE archivo específico
+        current_result = st.session_state.get('analysis_result', {})
+        is_analyzed = current_result.get('filename') == uploaded_file.name
+
+        if is_analyzed:
+            st.markdown("""
+            <div style="
+                background-color: rgba(46, 160, 67, 0.15); 
+                color: #3fb950; 
+                border: 1px solid rgba(46, 160, 67, 0.4); 
+                padding: 10px 15px; 
+                border-radius: 6px; 
+                display: inline-block;
+                font-weight: 500;
+            ">
+                ✅ Documento procesado correctamente
+            </div>
+            """, unsafe_allow_html=True)
+
+        elif st.button("Analizar Documento"):
             data = None
             with st.spinner("Procesando documento (Extrayendo, Clasificando, Resumiendo)..."):
                 try:
