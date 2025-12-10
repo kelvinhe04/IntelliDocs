@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 import os
 import time
+import pdfplumber
+from PIL import Image
 
 # Backend API URL
 API_URL = "http://localhost:8000"
@@ -223,11 +225,37 @@ with col1:
         if "image" in uploaded_file.type:
              # User requested half size (approx 300px seems reasonable for preview)
              st.image(uploaded_file, caption="Vista Previa de Imagen", width=300)
+        
+        elif "pdf" in uploaded_file.type:
+             try:
+                 with pdfplumber.open(uploaded_file) as pdf:
+                     total_pages = len(pdf.pages)
+                     if total_pages > 0:
+                         if total_pages == 1:
+                             # Single page: Show like an image (width=300)
+                             page = pdf.pages[0]
+                             im = page.to_image(resolution=100).original
+                             st.image(im, caption="Vista Previa (Portada)", width=300)
+                         else:
+                             # Multi page: Show first 3 pages
+                             preview_count = min(3, total_pages)
+                             st.caption(f"📑 Vista Previa (Primeras {preview_count} de {total_pages} páginas)")
+                             
+                             cols = st.columns(preview_count)
+                             for i in range(preview_count):
+                                 page = pdf.pages[i]
+                                 im = page.to_image(resolution=100).original
+                                 with cols[i]:
+                                     st.image(im, caption=f"Pág {i+1}", use_container_width=True)
+             except Exception:
+                 st.caption("Vista previa no disponible")
 
         if st.button("Analizar Documento"):
             data = None
             with st.spinner("Procesando documento (Extrayendo, Clasificando, Resumiendo)..."):
                 try:
+                    # Reset pointer because pdfplumber might have read it
+                    uploaded_file.seek(0)
                     # Dynamically pass the MIME type from Streamlit's detection
                     files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
                     response = requests.post(f"{API_URL}/analyze", files=files)
