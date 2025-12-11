@@ -162,9 +162,46 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error de conexión: {e}")
 
+    # Dialogo de confirmación usando st.dialog (Popup Modal)
+    @st.dialog("⚠️ Confirmar Borrado")
+    def open_delete_dialog():
+        # CSS Hack para forzar el centrado vertical estricto del modal
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stDialog"] > div:first-child {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0 !important;
+            }
+            div[data-testid="stDialog"] > div:first-child > div {
+                margin-top: 0 !important;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.write("¿Estás seguro de que quieres borrar **TODO** el historial?")
+        st.write("Esta acción no se puede deshacer.")
+        
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            if st.button("Sí, borrar todo", type="primary", use_container_width=True):
+                delete_all_callback()
+                st.rerun()
+        with col_d2:
+            if st.button("Cancelar", use_container_width=True):
+                st.rerun()
+
     cols_container = st.container()
     with cols_container:
-        st.button("🗑️ Borrar Todo", type="primary", use_container_width=True, on_click=delete_all_callback)
+        if st.button("🗑️ Borrar Todo", type="primary", use_container_width=True):
+            open_delete_dialog()
     
     # Esperar el siguiente ciclo de ejecución para actualizar UI (implícito en callback)
 
