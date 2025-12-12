@@ -426,7 +426,6 @@ with col2:
                 tab1, tab2 = st.tabs(["👀 Vista Renderizada", "📝 Código Markdown"])
                 
                 with tab1:
-                    st.info("Aquí ves las tablas y títulos con formato bonito.")
                     st.markdown(full_text)
                     
                 with tab2:
