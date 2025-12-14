@@ -367,41 +367,42 @@ with col1:
 
         st.caption(f"{len(uploaded_files)} archivo(s) listo(s) para analizar")
         
-        # Botón de Análisis Masivo
-        if st.button("Analizar Todo"):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Inicializar set de procesados y lista de resultados
-            if 'processed_files' not in st.session_state:
-                st.session_state['processed_files'] = set()
-            if 'batch_results' not in st.session_state:
-                st.session_state['batch_results'] = []
-            
-            for i, uploaded_file in enumerate(uploaded_files):
-                status_text.text(f"Procesando {uploaded_file.name} ({i+1}/{len(uploaded_files)})...")
+        # Botón de Análisis Masivo - Solo mostrar si NO hay resultados aún
+        if 'batch_results' not in st.session_state or not st.session_state['batch_results']:
+            if st.button("Analizar Todo"):
+                progress_bar = st.progress(0)
+                status_text = st.empty()
                 
-                # 2. Analyze
-                try:
-                    uploaded_file.seek(0)
-                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-                    response = requests.post(f"{API_URL}/analyze", files=files)
+                # Inicializar set de procesados y lista de resultados
+                if 'processed_files' not in st.session_state:
+                    st.session_state['processed_files'] = set()
+                if 'batch_results' not in st.session_state:
+                    st.session_state['batch_results'] = []
+                
+                for i, uploaded_file in enumerate(uploaded_files):
+                    status_text.text(f"Procesando {uploaded_file.name} ({i+1}/{len(uploaded_files)})...")
                     
-                    if response.status_code == 200:
-                        data = response.json()
-                        st.session_state['analysis_result'] = data # Legacy support for logic checks
-                        st.session_state['batch_results'].append(data) # Agregando a lista
-                        st.session_state['processed_files'].add(uploaded_file.name) # MARCAR COMO PROCESADO
-                    else:
-                        st.error(f"Error en {uploaded_file.name}: {response.text}")
-                except Exception as e:
-                    st.error(f"Error conectando: {e}")
+                    # 2. Analyze
+                    try:
+                        uploaded_file.seek(0)
+                        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+                        response = requests.post(f"{API_URL}/analyze", files=files)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            st.session_state['analysis_result'] = data # Legacy support for logic checks
+                            st.session_state['batch_results'].append(data) # Agregando a lista
+                            st.session_state['processed_files'].add(uploaded_file.name) # MARCAR COMO PROCESADO
+                        else:
+                            st.error(f"Error en {uploaded_file.name}: {response.text}")
+                    except Exception as e:
+                        st.error(f"Error conectando: {e}")
+                    
+                    progress_bar.progress((i + 1) / len(uploaded_files))
                 
-                progress_bar.progress((i + 1) / len(uploaded_files))
-            
-            status_text.text("¡Proceso completado!")
-            time.sleep(1)
-            st.rerun()
+                status_text.text("¡Proceso completado!")
+                time.sleep(1)
+                st.rerun()
 
     # Vista previa del ÚLTIMO archivo cargado o seleccionado (para mantener UI limpia)
     # Si hay results, mostramos info del result. Si no, mostramos preview del primer archivo subido.
