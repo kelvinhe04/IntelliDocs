@@ -2,7 +2,7 @@
 
 Este sistema es una solución de vanguardia para el análisis de documentos e imágenes. Utiliza el modelo **Gemini 2.5 Flash** de Google para procesar PDFs y fotos, extrayendo información con precisión humana, identificando objetos visuales (Modo Lens) y permitiendo búsquedas semánticas con razonamiento profundo.
 
-## 🚀 Características Principales
+## 🚀 Características Principales (Base)
 
 *   **Análisis Multimodal**: Sube **PDFs** (nativos o escaneados) o **Imágenes** (JPG, PNG, WEBP). El sistema lee todo.
 *   **Visual Search (Modo Lens)**: Si subes la foto de un coche, producto o lugar, el sistema usa **Google Search Grounding** para identificar la Marca, Modelo y Año exacto.
@@ -11,6 +11,19 @@ Este sistema es una solución de vanguardia para el análisis de documentos e im
     *   **Full Context**: Lee el documento completo (50k+ caracteres), no solo resúmenes, para encontrar detalles ocultos.
 *   **Prevención de Duplicados**: Sistema inteligente que bloquea la subida de archivos ya existentes para mantener limpia tu base de datos.
 *   **Clasificación Dinámica**: No usa categorías fijas. El modelo determina profesionalmente de qué trata el documento (ej: "Factura Electrónica", "Contrato de Arrendamiento").
+
+## 🏆 Mejoras Hackathon (Nuevas Funcionalidades)
+
+Estas son las mejoras "exponenciales" implementadas específicamente para el evento:
+
+1.  **Carga por Lotes (Batch Upload)**:
+    *   Ahora puedes arrastrar **múltiples archivos** a la vez. El sistema los procesará en cola automáticamente.
+2.  **Chat con tu Documento 💬**:
+    *   Rompe la barrera estática. Después del análisis, apareció un chat interactivo para hacer preguntas específicas sobre el documento (ej: *"¿Cuánto es el total de la factura?"*).
+    *   *Tecnología*: Usa la ventana de contexto de Gemini para leer el documento entero en cada pregunta.
+3.  **Resumen de Audio (Text-to-Speech) 🔊**:
+    *   Accesibilidad total. Un nuevo botón permite **escuchar** el análisis generado por la IA.
+    *   *Ideal para*: Revisión rápida de documentos mientras haces otras tareas.
 
 ## 📂 Estructura del Proyecto
 

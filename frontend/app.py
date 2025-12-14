@@ -288,148 +288,224 @@ col1, col2 = st.columns([1, 1], gap="large")
 def reset_analysis():
     if 'analysis_result' in st.session_state:
         del st.session_state['analysis_result']
+    if 'chat_history' in st.session_state:
+        del st.session_state['chat_history']
+    if 'processed_files' in st.session_state:
+        del st.session_state['processed_files']
+    if 'batch_results' in st.session_state:
+        del st.session_state['batch_results']
+
 
 with col1:
     st.markdown("""
         <h3 style='display: flex; align-items: center; gap: 8px; margin-bottom: 5px;'>
-            <div style='margin-left: -5px;'>📤</div> Cargar Documento
+            <div style='margin-left: -5px;'>📤</div> Cargar Documento(s)
         </h3>
     """, unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("Elige un archivo (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], on_change=reset_analysis, key="main_file_uploader")
+    uploaded_files = st.file_uploader("Elige archivo(s) (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], accept_multiple_files=True, on_change=reset_analysis, key="main_file_uploader")
 
-    if uploaded_file is not None:
-        # --- Pre-validación de Duplicados ---
+    if uploaded_files:
+        # 1. MOSTRAR VISTA PREVIA (Detectar de la lista)
+        # Mostrar carrusel/columnas de hasta 3
+        st.caption(f"📑 Vista Previa de Selección ({len(uploaded_files)})")
+        
+        # Paginar vista previa si son muchos
+        cols = st.columns(min(len(uploaded_files), 3))
+        
+        for i, file_obj in enumerate(uploaded_files[:3]):
+             fname = file_obj.name.lower()
+             ftype = file_obj.type
+             
+             with cols[i]:
+                 if "image" in ftype or any(fname.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+                      st.image(file_obj, caption=file_obj.name, use_container_width=True)
+                 elif "pdf" in ftype or fname.endswith('.pdf'):
+                      try:
+                          with pdfplumber.open(file_obj) as pdf:
+                              if len(pdf.pages) > 0:
+                                  im = pdf.pages[0].to_image(resolution=150).original
+                                  st.image(im, caption=file_obj.name, use_container_width=True)
+                      except:
+                          st.caption(f"Previo no disponible: {file_obj.name}")
+        
+        if len(uploaded_files) > 3:
+            st.caption(f"...y {len(uploaded_files)-3} más.")
+
+        # 2. VALIDACIÓN DE DUPLICADOS STRICTA (Bloqueante)
+        # Verificamos TODOS los archivos seleccionados. Si ALGUNO existe, mostramos error y bloqueamos.
+        # EXCEPCIÓN: Si el archivo acaba de ser procesado (está en session_state), lo dejamos pasar para ver resultados.
+        
+        if 'processed_files' not in st.session_state:
+            st.session_state['processed_files'] = set()
+
         try:
-             # Obtener docs existentes para verificar sin golpear el análisis del backend
              doc_res = requests.get(f"{API_URL}/documents")
              if doc_res.status_code == 200:
-                 existing_docs = doc_res.json()
-                 existing_filenames = [d.get('filename') for d in existing_docs]
+                 existing_filenames = [d.get('filename') for d in doc_res.json()]
                  
-                 if uploaded_file.name in existing_filenames:
-                     # ARREGLO CRÍTICO:
-                     # Solo bloquear si este archivo NO es el que acabamos de analizar con éxito y estamos mostrando.
-                     # Esto previene el bucle "Éxito -> Refrescar -> Error".
-                     current_result = st.session_state.get('analysis_result', {})
-                     is_current_result = current_result.get('filename') == uploaded_file.name
+                 # Solo consideramos duplicados aquellos que YA existían y NO son los que acabamos de subir con éxito
+                 duplicates = []
+                 for f in uploaded_files:
+                     if f.name in existing_filenames:
+                         if f.name not in st.session_state['processed_files']:
+                             duplicates.append(f.name)
+                 
+                 if duplicates:
+                    st.error(f"⚠️ Archivos duplicados detectados: {', '.join(duplicates)}")
+                    st.warning("El sistema no permite subir archivos que ya existen. Elimínalos de la selección para continuar.")
+                    st.stop() # DETENER EJECUCIÓN (Bloqueo real)
+                 
+                 # Si no hay duplicados bloqueantes, pero hay archivos en 'processed_files', mostramos éxito
+                 processed_here = [f.name for f in uploaded_files if f.name in st.session_state['processed_files']]
+                 if processed_here:
+                     st.success(f"✅ Archivos procesados: {len(processed_here)}/{len(uploaded_files)}")
                      
-                     if not is_current_result:
-                         st.error(f"⚠️ El archivo '{uploaded_file.name}' ya existe en el sistema. Por favor, elimínalo primero o sube uno diferente.")
-                         # Detener ejecución aquí (no mostrar botón Analizar)
-                         st.stop()
-        except:
-            pass # Fallar abierto si el backend es inalcanzable, dejar que el análisis principal lo maneje
+        except Exception as e:
+            # Si falla la conexión, no bloqueamos para no romper la UX
+            print(f"Error checking duplicates: {e}")
+            pass
 
-        # Asegurar stream al inicio
-        uploaded_file.seek(0)
+        st.caption(f"{len(uploaded_files)} archivo(s) listo(s) para analizar")
         
-        # Estandarizar Tamaño de Vista Previa: Siempre usar 1/3 del ancho del contenedor
-        preview_cols = st.columns(3)
-        
-        # Detectar Tipo Robustamente
-        file_type = uploaded_file.type
-        file_name = uploaded_file.name.lower()
-        
-        # Mostrar Vista Previa si es imagen
-        if "image" in file_type or any(file_name.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-             with preview_cols[0]:
-                 st.image(uploaded_file, caption="Vista Previa de Imagen", use_container_width=True)
-        
-        elif "pdf" in file_type or file_name.endswith('.pdf'):
-             try:
-                 with pdfplumber.open(uploaded_file) as pdf:
-                     total_pages = len(pdf.pages)
-                     if total_pages > 0:
-                         # Mostrar hasta 3 páginas
-                         preview_count = min(3, total_pages)
-                         if total_pages > 1:
-                             st.caption(f"📑 Vista Previa (Primeras {preview_count} de {total_pages} páginas)")
-                         else:
-                             st.caption("📑 Vista Previa (Portada)")
-                             
-                         for i in range(preview_count):
-                             page = pdf.pages[i]
-                             # Alta Res 300 DPI
-                             im = page.to_image(resolution=300).original
-                             with preview_cols[i]:
-                                 st.image(im, caption=f"Pág {i+1}", use_container_width=True)
-             except Exception:
-                 st.caption("Vista previa no disponible")
-
-        # Verificar si ya tenemos resultados para ESTE archivo específico
-        current_result = st.session_state.get('analysis_result', {})
-        is_analyzed = current_result.get('filename') == uploaded_file.name
-
-        if is_analyzed:
-            st.markdown("""
-            <div style="
-                background-color: rgba(46, 160, 67, 0.15); 
-                color: #3fb950; 
-                border: 1px solid rgba(46, 160, 67, 0.4); 
-                padding: 10px 15px; 
-                border-radius: 6px; 
-                display: inline-block;
-                font-weight: 500;
-            ">
-                ✅ Documento procesado correctamente
-            </div>
-            """, unsafe_allow_html=True)
-
-        elif st.button("Analizar Documento"):
-            data = None
-            with st.spinner("Procesando documento (Extrayendo, Clasificando, Resumiendo)..."):
+        # Botón de Análisis Masivo
+        if st.button("Analizar Todo"):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Inicializar set de procesados y lista de resultados
+            if 'processed_files' not in st.session_state:
+                st.session_state['processed_files'] = set()
+            if 'batch_results' not in st.session_state:
+                st.session_state['batch_results'] = []
+            
+            for i, uploaded_file in enumerate(uploaded_files):
+                status_text.text(f"Procesando {uploaded_file.name} ({i+1}/{len(uploaded_files)})...")
+                
+                # 2. Analyze
                 try:
-                    # Reset pointer because pdfplumber might have read it
                     uploaded_file.seek(0)
-                    # Dynamically pass the MIME type from Streamlit's detection
                     files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
                     response = requests.post(f"{API_URL}/analyze", files=files)
                     
                     if response.status_code == 200:
                         data = response.json()
-                        st.session_state['analysis_result'] = data
-                    elif response.status_code == 400:
-                         # Handle duplicate file error gracefully
-                         st.warning(f"⚠️ {response.json().get('detail')}")
+                        st.session_state['analysis_result'] = data # Legacy support for logic checks
+                        st.session_state['batch_results'].append(data) # Agregando a lista
+                        st.session_state['processed_files'].add(uploaded_file.name) # MARCAR COMO PROCESADO
                     else:
-                        st.error(f"Falló el análisis: {response.text}")
+                        st.error(f"Error en {uploaded_file.name}: {response.text}")
                 except Exception as e:
-                    st.error(f"Error conectando al backend: {e}")
+                    st.error(f"Error conectando: {e}")
+                
+                progress_bar.progress((i + 1) / len(uploaded_files))
+            
+            status_text.text("¡Proceso completado!")
+            time.sleep(1)
+            st.rerun()
 
-            # Fuera del Spinner
-            if data:
-                 # Asegurar que solo mostramos éxito si los datos se cargaron realmente en esta ejecución
-                 st.session_state['just_analyzed'] = True # Bandera opcional si queremos mostrar un toast luego
-                 st.rerun()
+    # Vista previa del ÚLTIMO archivo cargado o seleccionado (para mantener UI limpia)
+    # Si hay results, mostramos info del result. Si no, mostramos preview del primer archivo subido.
+    if uploaded_files and len(uploaded_files) == 1:
+        # Legacy single file preview logic
+        uploaded_file = uploaded_files[0]
+        # (Mantener lógica de preview visual aquí si se quiere, simplificado para batch)
+        # ... (Omitido para brevedad en batch, pero idealment mostrar preview simple)
+
 
 with col2:
     st.subheader("📊 Resultados del Análisis")
-    if 'analysis_result' in st.session_state:
-        res = st.session_state['analysis_result']
+    
+    # Usar batch_results si existe, si no fallback a single 'analysis_result' convertido a lista
+    results_to_show = []
+    if 'batch_results' in st.session_state and st.session_state['batch_results']:
+        results_to_show = st.session_state['batch_results']
+    elif 'analysis_result' in st.session_state:
+        results_to_show = [st.session_state['analysis_result']]
         
-        if 'error' in res:
-            st.error(f"Error: {res['error']}")
-        else:
-            category_score = res.get('category_score', 0)
-            category_name = res.get('category', 'Desconocido').upper()
+    if results_to_show:
+        for idx, res in enumerate(results_to_show):
+            doc_filename = res.get('filename', f'Documento {idx+1}')
             
-
-            with st.expander("Clasificación", expanded=True):
-                 st.info(f"Categoría: **{res.get('category')}** (Confianza: {res.get('category_score', 0)*100:.1f}%)")
-            
-            st.success("Resumen Generado:")
-            st.write(res.get('summary'))
-            
-            with st.expander("Ver texto extraído completo"):
-                full_text = res.get('full_text') or res.get('text_preview', '')
+            # Contenedor Visual Distinto por Documento
+            with st.container():
+                st.markdown(f"#### 📄 {doc_filename}")
                 
-                tab1, tab2 = st.tabs(["👀 Vista Renderizada", "📝 Código Markdown"])
-                
-                with tab1:
-                    st.markdown(full_text)
+                if 'error' in res:
+                    st.error(f"Error: {res['error']}")
+                else:
+                    category = res.get('category', 'N/A')
+                    confidence = res.get('category_score', 0)
+                    summary_text = res.get('summary')
+                    full_text = res.get('full_text') or res.get('text_preview', '')
                     
-                with tab2:
-                    st.text_area("Copiar Texto:", value=full_text, height=300)
+                    # Layout Compacto
+                    c1, c2 = st.columns([1, 2])
+                    with c1:
+                        st.info(f"**Categoría**: {category}\n\n(Confianza: {confidence*100:.0f}%)")
+                    with c2:
+                        st.write(f"**Resumen**: {summary_text[:300]}..." if len(summary_text)>300 else f"**Resumen**: {summary_text}")
+                        # Expandir resumen completo si es largo
+                        if len(summary_text) > 300:
+                            with st.expander("Leer resumen completo"):
+                                st.write(summary_text)
+
+                    # Acciones
+                    ac1, ac2, ac3 = st.columns(3)
+                    
+                    with ac1:
+                        # AUDIO PLAYER unique key per doc
+                        if st.button("🔊 Escuchar", key=f"btn_audio_{idx}"):
+                             with st.spinner("Generando audio..."):
+                                 try:
+                                     ares = requests.post(f"{API_URL}/generate_audio", json={"text": summary_text})
+                                     if ares.status_code == 200:
+                                         apath = ares.json().get('audio_path')
+                                         st.audio(apath)
+                                     else:
+                                         st.error("Error audio")
+                                 except:
+                                     st.error("Error conexión")
+
+                    with ac2:
+                        st.download_button("💾 Texto", data=full_text, file_name=f"{doc_filename}.txt", key=f"btn_dl_{idx}")
+                    
+                    with ac3:
+                        with st.popover("💬 Chat"):
+                             st.markdown(f"**Chat con {doc_filename}**")
+                             # Mini Chat contextual
+                             # Necesitamos ID real
+                             real_id = None
+                             try:
+                                 # Optimización: No llamar a API por cada doc en loop si son muchos.
+                                 # Pero por ahora ok.
+                                 docs_check = requests.get(f"{API_URL}/documents").json()
+                                 for d in docs_check:
+                                     if d['filename'] == res.get('filename'):
+                                         real_id = d['id']
+                                         break
+                             except: pass
+                             
+                             if real_id:
+                                 q = st.text_input("Pregunta:", key=f"chat_input_{idx}")
+                                 if q:
+                                     with st.spinner("Pensando..."):
+                                         cres = requests.post(f"{API_URL}/chat_document", json={"doc_id": real_id, "query": q})
+                                         if cres.status_code == 200:
+                                             st.markdown(cres.json().get('answer'))
+                                         else:
+                                             st.error("Error")
+                             else:
+                                 st.warning("ID no encontrado para chat")
+
+                    # Vista de Texto Completo con Tabs
+                    with st.expander("Ver texto extraído completo"):
+                        tab1, tab2 = st.tabs(["👀 Vista Renderizada", "📝 Código Markdown"])
+                        with tab1:
+                            st.markdown(full_text)
+                        with tab2:
+                            st.text_area("Copiar Texto:", value=full_text, height=300, key=f"text_area_{idx}")
+
+                    st.markdown("---")
 
     else:
-        st.info("Sube y analiza un documento para ver los resultados aquí.")
+        st.info("Sube y analiza documentos para interactuar con ellos.")

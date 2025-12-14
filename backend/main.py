@@ -1,9 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import shutil
 import os
 import uuid
 import uvicorn
+from gtts import gTTS
 
 # Módulos Principales
 # from extractor import extract_text_from_pdf
@@ -159,6 +161,58 @@ async def delete_all_documents():
     try:
         vector_store.clear_all()
         return {"status": "todos_eliminados"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat_document")
+async def chat_document(payload: dict = Body(...)):
+    try:
+        doc_id = payload.get("doc_id")
+        query = payload.get("query")
+        
+        if not doc_id or not query:
+             raise HTTPException(status_code=400, detail="Faltan parámetros doc_id o query")
+             
+        # Leer texto del documento
+        txt_path = f"data/uploads/{doc_id}.txt"
+        if not os.path.exists(txt_path):
+             raise HTTPException(status_code=404, detail="Documento no encontrado")
+             
+        with open(txt_path, "r", encoding="utf-8") as f:
+            context_text = f.read()
+            
+        # Llamar a Gemini
+        answer = gemini_service.chat_with_document(context_text, query)
+        return {"answer": answer}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate_audio")
+async def generate_audio(payload: dict = Body(...)):
+    try:
+        text = payload.get("text")
+        if not text:
+             raise HTTPException(status_code=400, detail="Falta texto")
+        
+        # Generar Audio
+        # Truncar si es muy largo para TTS rápido (max 500 chars para demo rápida)
+        # O dejarlo todo si se quiere leer el resumen completo.
+        # Usaremos el resumen completo.
+        
+        tts = gTTS(text=text, lang='es')
+        audio_filename = f"audio_{uuid.uuid4()}.mp3"
+        audio_path = f"data/uploads/{audio_filename}"
+        tts.save(audio_path)
+        
+        # Deberíamos servir el archivo estático o devolverlo como FileResponse
+        # Para simplificar, devolveremos la URL local relativa si Streamlit pudiera leerla
+        # Pero como backend y frontend están separados en ejecución, mejor devolver el path 
+        # y que streamlit lo lea si comparte FS, o devolver el archivo binario.
+        
+        # Vamos a devolver la ruta, asumiendo que Streamlit corre localmente y tiene acceso a "data/uploads"
+        return {"audio_path": audio_path} 
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -267,3 +267,27 @@ class GeminiService:
             print(f"Error de Rerank: {e}")
             # Fallback: Retornar candidatos originales
             return candidates
+
+    def chat_with_document(self, context_text: str, query: str) -> str:
+        """
+        Permite chatear con un documento específico.
+        """
+        try:
+            prompt = f"""
+            Actúa como un asistente experto analizando el siguiente documento.
+            
+            Documento:
+            {context_text[:50000]} 
+            
+            Consulta del Usuario: "{query}"
+            
+            Instrucciones:
+            1. Responde basándote EXCLUSIVAMENTE en el documento proporcionado.
+            2. Si la respuesta no está en el documento, dilo claramente.
+            3. Sé conciso pero útil. Usa formato Markdown (negritas, listas) si ayuda a la claridad.
+            """
+            
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            return f"Error al procesar la pregunta: {e}"
