@@ -343,8 +343,8 @@ with col1:
         # Mostrar carrusel/columnas de hasta 3
         st.caption(f"📑 Vista Previa de Selección ({len(uploaded_files)})")
         
-        # Paginar vista previa si son muchos
-        cols = st.columns(min(len(uploaded_files), 3))
+        # Paginar vista previa (Siempre usar 3 columnas para mantener tamaño consistente 1/3)
+        cols = st.columns(3)
         
         for i, file_obj in enumerate(uploaded_files[:3]):
              fname = file_obj.name.lower()
