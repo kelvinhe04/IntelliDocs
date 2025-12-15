@@ -24,6 +24,9 @@ Estas son las mejoras "exponenciales" implementadas específicamente para el eve
 3.  **Resumen de Audio (Text-to-Speech) 🔊**:
     *   Accesibilidad total. Un nuevo botón permite **escuchar** el análisis generado por la IA.
     *   *Ideal para*: Revisión rápida de documentos mientras haces otras tareas.
+4.  **Comparador Inteligente (Cross-Document)** ⚖️:
+    *   ¿Indeciso entre dos contratos? Selecciónalos y la IA generará una **Tabla Comparativa** detallada con diferencias, similitudes y un veredicto final.
+    *   *Capacidad*: Analiza múltiples documentos simultáneamente para encontrar discrepancias críticas.
 
 ## 📂 Estructura del Proyecto
 

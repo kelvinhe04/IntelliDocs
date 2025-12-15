@@ -18,7 +18,7 @@ class GeminiService:
 
         print("Inicializando Servicio Gemini...")
         genai.configure(api_key=API_KEY)
-        # Usando el último modelo disponible
+        # Usando gemini-2.5-flash como solicitó el usuario
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         
     def summarize(self, text: str) -> str:
@@ -124,6 +124,7 @@ class GeminiService:
             """
             
             # Configuración de Seguridad (Desactivar bloqueo estricto para evitar falsos positivos)
+            # Configuración de Seguridad
             safety = {
                 "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
                 "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
@@ -134,6 +135,7 @@ class GeminiService:
             # Ayuda para reintentos en error 429
             for attempt in range(3):
                 try:
+                    # Argumentos dinámicos para la generación
                     response = self.model.generate_content(
                         [uploaded_file, prompt], 
                         generation_config={"response_mime_type": "application/json"},
@@ -291,3 +293,45 @@ class GeminiService:
             return response.text.strip()
         except Exception as e:
             return f"Error al procesar la pregunta: {e}"
+
+    def compare_documents(self, docs_list: list) -> str:
+        """
+        Compara múltiples documentos y genera una tabla o análisis comparativo.
+        docs_list: Lista de diccionarios [{'name': '...', 'text': '...'}]
+        """
+        try:
+            # Construir el prompt con todos los documentos
+            docs_context = ""
+            for i, doc in enumerate(docs_list):
+                 docs_context += f"""
+                 --- DOCUMENTO {i+1}: {doc.get('name')} ---
+                 {doc.get('text')[:20000]}
+                 
+                 """
+            
+            prompt = f"""
+            Actúa como un Consultor Analista Senior.
+            Tu tarea es COMPARAR minuciosamente los siguientes documentos.
+            
+            {docs_context}
+            
+            INSTRUCCIONES:
+            1. Identifica las similitudes y diferencias clave entre ellos.
+            2. Extrae puntos de datos comparables (fechas, montos, cláusulas, nombres, temas).
+            3. Genera una TABLA COMPARATIVA en Markdown donde las columnas sean los documentos y las filas los criterios de comparación.
+            4. Después de la tabla, añade un breve párrafo de "Conclusión/Veredicto" sobre cuál es mejor o más completo (si aplica).
+            5. IDIOMA: Español.
+            
+            Formato de salida esperado:
+            ## ⚖️ Tabla Comparativa
+            (Tabla Markdown)
+            
+            ## 💡 Análisis de Diferencias
+            (Breve explicación de las diferencias más críticas)
+            """
+            
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            return f"Error comparando documentos: {e}"

@@ -146,6 +146,40 @@ with st.sidebar:
                     st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
 
     st.markdown("---")
+    st.header("⚖️ Comparador Inteligente")
+    st.caption("Selecciona documentos para ver sus diferencias.")
+
+    # Función Dialog para mostrar resultado
+    @st.dialog("Resultados de la Comparación", width="large")
+    def show_comparison_dialog(text):
+        st.markdown(text)
+
+    # Obtener docs para comparar
+    try:
+        c_docs = requests.get(f"{API_URL}/documents").json()
+        c_filenames = [d['filename'] for d in c_docs]
+        
+        selected_for_comp = st.multiselect("Elige 2+ documentos:", c_filenames, key="comp_multi")
+        
+        if st.button("Comparar Selección", type="secondary"):
+            if len(selected_for_comp) < 2:
+                st.warning("Necesitas al menos 2.")
+            else:
+                with st.spinner("Gemini está comparando..."):
+                    try:
+                        # Enviar filenames como doc_ids (backend lo maneja)
+                        res = requests.post(f"{API_URL}/compare", json={"doc_ids": selected_for_comp})
+                        if res.status_code == 200:
+                            comp_text = res.json().get("comparison")
+                            show_comparison_dialog(comp_text)
+                        else:
+                            st.error(f"Error: {res.text}")
+                    except Exception as e:
+                        st.error(f"Fallo conexión: {e}")
+    except:
+        st.caption("Cargando lista...")
+
+    st.markdown("---")
     st.header("📂 Historial")
     
     # Callback para Borrar Todo

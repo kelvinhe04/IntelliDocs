@@ -216,5 +216,54 @@ async def generate_audio(payload: dict = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@app.post("/compare")
+async def compare_documents(payload: dict = Body(...)):
+    try:
+        doc_ids = payload.get("doc_ids") # Lista de IDs o Filenames
+        if not doc_ids or len(doc_ids) < 2:
+             raise HTTPException(status_code=400, detail="Se requieren al menos 2 documentos para comparar.")
+             
+        docs_data = []
+        for doc_identifier in doc_ids:
+            # Intentar encontrar archivo .txt
+            # Asumimos que doc_identifier puede ser ID o Filename. 
+            # Si es filename, necesitamos buscar su ID o asumir que filename == ID si usamos backend simple.
+            # En v1, usabamos ID. Pero frontend a veces tiene solo filename.
+            # Vamos a buscar el .txt directamente si existe
+            
+            # Caso ideal: Es el ID directo
+            txt_path = f"data/uploads/{doc_identifier}.txt"
+            
+            # Caso 2: Es filename, buscar en metadatos (lento pero seguro)
+            if not os.path.exists(txt_path):
+                 # Lookup simple
+                 found = False
+                 all_docs = vector_store.list_documents()
+                 for d in all_docs:
+                     if d['filename'] == doc_identifier:
+                         txt_path = f"data/uploads/{d['id']}.txt"
+                         doc_identifier = d['filename'] # Usar nombre real para display
+                         found = True
+                         break
+                 if not found:
+                     continue # Skip si no se encuentra
+            
+            if os.path.exists(txt_path):
+                with open(txt_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+                    docs_data.append({"name": doc_identifier, "text": text})
+
+        if len(docs_data) < 2:
+             raise HTTPException(status_code=400, detail="No se encontraron suficientes textos válidos para comparar.")
+
+        # Llamar a Gemini
+        comparison = gemini_service.compare_documents(docs_data)
+        return {"comparison": comparison}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
