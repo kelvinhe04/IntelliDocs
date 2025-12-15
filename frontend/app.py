@@ -16,7 +16,8 @@ st.set_page_config(
 
 # CSS Personalizado para apariencia premium
 st.markdown("""
-<style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
     /* Modo Oscuro Global */
     .stApp {
         background-color: #0e1117;
@@ -82,18 +83,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-    <h1 style='display: flex; align-items: center; gap: 0px; margin-top: 20px;'>
-        <div style='font-size: 1.2em; margin-right: 8px; margin-left: -5px;'>🧠</div> Análisis Multimodal de Archivos
+    <h1 style='display: flex; align-items: center; gap: 15px; margin-top: 20px;'>
+        <i class="fa-solid fa-brain" style="color: #00D4FF;"></i> Análisis Multimodal de Archivos
     </h1>
 """, unsafe_allow_html=True)
 st.markdown("Sube **PDFs, Imágenes o Fotos** para que la IA los analice, clasifique y extraiga su información.")
 
 # Barra lateral para Búsqueda e Historial
 with st.sidebar:
-    st.header("🔍 Búsqueda & Razonamiento")
+    st.markdown("### <i class='fa-solid fa-magnifying-glass'></i> Búsqueda & Razonamiento", unsafe_allow_html=True)
     st.markdown("Haz preguntas complejas sobre tus archivos. La IA entiende el contexto visual y textual.")
     search_query = st.text_input("", placeholder="Ej: ¿Qué coche es rojo? o Busca facturas de >$100")
-    st.caption("💡 Truco: Puedes buscar por conceptos visuales, valores numéricos o texto específico.")
+    st.caption("Truco: Puedes buscar por conceptos visuales, valores numéricos o texto específico.")
     
     if st.button("Buscar"):
         if search_query:
@@ -129,7 +130,7 @@ with st.sidebar:
                 with st.expander(f"{meta['filename']} ({int(score*100)}%)"):
                     st.markdown(f"**Relevancia:** :{color}[{quality}]")
                     if reasoning:
-                        st.info(f"💡 **Análisis:** {reasoning}")
+                        st.info(f"**Análisis:** {reasoning}")
                     st.caption(f"Categoría: {meta.get('category', 'N/A')}")
                     st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
             
@@ -146,7 +147,7 @@ with st.sidebar:
                     st.write(f"**Resumen:** {meta.get('summary', '')[:150]}...")
 
     st.markdown("---")
-    st.header("⚖️ Comparador Inteligente")
+    st.markdown("### <i class='fa-solid fa-scale-balanced'></i> Comparador Inteligente", unsafe_allow_html=True)
     st.caption("Selecciona documentos para ver sus diferencias.")
 
     # Función Dialog para mostrar resultado
@@ -180,7 +181,7 @@ with st.sidebar:
         st.caption("Cargando lista...")
 
     st.markdown("---")
-    st.header("📂 Historial")
+    st.markdown("### <i class='fa-solid fa-folder-open'></i> Historial", unsafe_allow_html=True)
     
     # Callback para Borrar Todo
     def delete_all_callback():
@@ -234,7 +235,7 @@ with st.sidebar:
 
     cols_container = st.container()
     with cols_container:
-        if st.button("🗑️ Borrar Todo", type="primary", use_container_width=True):
+        if st.button("Borrar Todo", type="primary", use_container_width=True):
             open_delete_dialog()
     
     # Esperar el siguiente ciclo de ejecución para actualizar UI (implícito en callback)
@@ -244,7 +245,7 @@ with st.sidebar:
         res_docs = requests.get(f"{API_URL}/documents")
         if res_docs.status_code == 200:
             docs = res_docs.json()
-            st.caption(f"Total: {len(docs)} documentos")
+            st.caption(f"<i class='fa-solid fa-layer-group'></i> Total: {len(docs)} documentos", unsafe_allow_html=True)
             
             if docs:
                 # Mapa Nombre -> ID
@@ -332,8 +333,8 @@ def reset_analysis():
 
 with col1:
     st.markdown("""
-        <h3 style='display: flex; align-items: center; gap: 8px; margin-bottom: 5px;'>
-            <div style='margin-left: -5px;'>📤</div> Cargar Documento(s)
+        <h3 style='display: flex; align-items: center; gap: 10px; margin-bottom: 5px;'>
+            <i class="fa-solid fa-cloud-arrow-up"></i> Cargar Documento(s)
         </h3>
     """, unsafe_allow_html=True)
     uploaded_files = st.file_uploader("Elige archivo(s) (PDF o Imagen)", type=["pdf", "png", "jpg", "jpeg", "webp"], accept_multiple_files=True, on_change=reset_analysis, key="main_file_uploader")
@@ -341,7 +342,7 @@ with col1:
     if uploaded_files:
         # 1. MOSTRAR VISTA PREVIA (Detectar de la lista)
         # Mostrar carrusel/columnas de hasta 3
-        st.caption(f"📑 Vista Previa de Selección ({len(uploaded_files)})")
+        st.caption(f"Vista Previa de Selección ({len(uploaded_files)})")
         
         # Paginar vista previa (Siempre usar 3 columnas para mantener tamaño consistente 1/3)
         cols = st.columns(3)
@@ -385,14 +386,14 @@ with col1:
                              duplicates.append(f.name)
                  
                  if duplicates:
-                    st.error(f"⚠️ Archivos duplicados detectados: {', '.join(duplicates)}")
+                    st.error(f"Archivos duplicados detectados: {', '.join(duplicates)}")
                     st.warning("El sistema no permite subir archivos que ya existen. Elimínalos de la selección para continuar.")
                     st.stop() # DETENER EJECUCIÓN (Bloqueo real)
                  
                  # Si no hay duplicados bloqueantes, pero hay archivos en 'processed_files', mostramos éxito
                  processed_here = [f.name for f in uploaded_files if f.name in st.session_state['processed_files']]
                  if processed_here:
-                     st.success(f"✅ Archivos procesados: {len(processed_here)}/{len(uploaded_files)}")
+                     st.success(f"Archivos procesados: {len(processed_here)}/{len(uploaded_files)}")
                      
         except Exception as e:
             # Si falla la conexión, no bloqueamos para no romper la UX
@@ -448,7 +449,7 @@ with col1:
 
 
 with col2:
-    st.subheader("📊 Resultados del Análisis")
+    st.markdown("### <i class='fa-solid fa-square-poll-vertical'></i> Resultados del Análisis", unsafe_allow_html=True)
     
     # Usar batch_results si existe, si no fallback a single 'analysis_result' convertido a lista
     results_to_show = []
@@ -463,7 +464,7 @@ with col2:
             
             # Contenedor Visual Distinto por Documento
             with st.container():
-                st.markdown(f"#### 📄 {doc_filename}")
+                st.markdown(f"#### <i class='fa-solid fa-file-lines'></i> {doc_filename}", unsafe_allow_html=True)
                 
                 if 'error' in res:
                     st.error(f"Error: {res['error']}")
@@ -489,7 +490,7 @@ with col2:
                     
                     with ac1:
                         # AUDIO PLAYER unique key per doc
-                        if st.button("🔊 Escuchar", key=f"btn_audio_{idx}"):
+                        if st.button("Escuchar", key=f"btn_audio_{idx}"):
                              with st.spinner("Generando audio..."):
                                  try:
                                      ares = requests.post(f"{API_URL}/generate_audio", json={"text": summary_text})
@@ -502,10 +503,10 @@ with col2:
                                      st.error("Error conexión")
 
                     with ac2:
-                        st.download_button("💾 Texto", data=full_text, file_name=f"{doc_filename}.txt", key=f"btn_dl_{idx}")
+                        st.download_button("Texto", data=full_text, file_name=f"{doc_filename}.txt", key=f"btn_dl_{idx}")
                     
                     with ac3:
-                        with st.popover("💬 Chat"):
+                        with st.popover("Chat"):
                              st.markdown(f"**Chat con {doc_filename}**")
                              # Mini Chat contextual
                              # Necesitamos ID real
@@ -534,7 +535,7 @@ with col2:
 
                     # Vista de Texto Completo con Tabs
                     with st.expander("Ver texto extraído completo"):
-                        tab1, tab2 = st.tabs(["👀 Vista Renderizada", "📝 Código Markdown"])
+                        tab1, tab2 = st.tabs(["Vista Renderizada", "Código Markdown"])
                         with tab1:
                             st.markdown(full_text)
                         with tab2:
