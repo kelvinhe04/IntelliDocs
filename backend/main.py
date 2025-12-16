@@ -24,17 +24,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar Servicios
-print("Inicializando Servicios de IA...")
-# 1. Gemini (Motor de Razonamiento)
-gemini_service = GeminiService()
+# Inicializar Servicios (Lazy Loading)
+gemini_service = None
+embedder = None
+vector_store = None
 
-# 2. Embeddings (Motor de Búsqueda - Local es más rápido/barato para vectores)
-embedder = EmbeddingGenerator()
+@app.on_event("startup")
+async def startup_event():
+    global gemini_service, embedder, vector_store
+    print("Inicializando Servicios de IA...")
+    # 1. Gemini (Motor de Razonamiento)
+    gemini_service = GeminiService()
 
-# 3. Almacén Vectorial
-vector_store = VectorStore()
-print("Servicios de IA Inicializados (Gemini + Vectores Locales).")
+    # 2. Embeddings (Motor de Búsqueda - Local es más rápido/barato para vectores)
+    embedder = EmbeddingGenerator()
+
+    # 3. Almacén Vectorial
+    vector_store = VectorStore()
+    print("Servicios de IA Inicializados (Gemini + Vectores Locales).")
 
 # Asegurar directorios
 UPLOAD_DIR = "data/uploads"
