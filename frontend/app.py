@@ -6,7 +6,8 @@ import pdfplumber
 from PIL import Image
 
 # URL de API Backend
-API_URL = "http://localhost:8000"
+# URL de API Backend
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(
     page_title="Análisis Multimodal de Archivos",
