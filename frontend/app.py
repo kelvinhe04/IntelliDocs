@@ -151,9 +151,50 @@ with st.sidebar:
     st.caption("Selecciona documentos para ver sus diferencias.")
 
     # Función Dialog para mostrar resultado
+    # Función Dialog para mostrar resultado
     @st.dialog("Resultados de la Comparación", width="large")
-    def show_comparison_dialog(text):
-        st.markdown(text)
+    def show_comparison_dialog(comp_data):
+        # 1. Mostrar Análisis
+        analysis = comp_data.get("analysis_note", "Sin análisis.")
+        st.markdown(f"### 💡 Conclusión\n{analysis}")
+        
+        # 2. Mostrar Tabla
+        table_data = comp_data.get("comparison_table", [])
+        if table_data:
+            import pandas as pd
+            df = pd.DataFrame(table_data)
+            st.dataframe(df, use_container_width=True)
+            
+            st.markdown("---")
+            # 3. Botón de Exportación
+            col_exp, _ = st.columns([1, 2])
+            with col_exp:
+                if st.button("📥 Preparar Excel"):
+                    with st.spinner("Generando archivo..."):
+                        try:
+                            # Llamar endpoint de exportación
+                            exp_res = requests.post(f"{API_URL}/export_comparison_excel", json=comp_data)
+                            if exp_res.status_code == 200:
+                                excel_path = exp_res.json().get("excel_path")
+                                if excel_path and os.path.exists(excel_path):
+                                    with open(excel_path, "rb") as f:
+                                        excel_bytes = f.read()
+                                    
+                                    st.download_button(
+                                        label="💾 Descargar .xlsx",
+                                        data=excel_bytes,
+                                        file_name="comparacion_inteligente.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        key="btn_final_dl_excel"
+                                    )
+                                else:
+                                    st.error("Archivo no encontrado.")
+                            else:
+                                st.error("Error generando Excel.")
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+        else:
+            st.warning("No se pudieron extraer datos tabulares.")
 
     # Obtener docs para comparar
     try:
@@ -166,13 +207,14 @@ with st.sidebar:
             if len(selected_for_comp) < 2:
                 st.warning("Necesitas al menos 2.")
             else:
-                with st.spinner("Gemini está comparando..."):
+                with st.spinner("Gemini está comparando y estructurando datos..."):
                     try:
                         # Enviar filenames como doc_ids (backend lo maneja)
                         res = requests.post(f"{API_URL}/compare", json={"doc_ids": selected_for_comp})
                         if res.status_code == 200:
-                            comp_text = res.json().get("comparison")
-                            show_comparison_dialog(comp_text)
+                            comp_data = res.json().get("comparison")
+                            # comp_data ahora es un DICT (JSON)
+                            show_comparison_dialog(comp_data)
                         else:
                             st.error(f"Error: {res.text}")
                     except Exception as e:

@@ -5,7 +5,7 @@ Este sistema es una solución de vanguardia para el análisis de documentos e im
 ## 🚀 Características Principales (Base)
 
 *   **Análisis Multimodal**: Sube **PDFs** (nativos o escaneados) o **Imágenes** (JPG, PNG, WEBP). El sistema lee todo.
-*   **Visual Search (Modo Lens)**: Si subes la foto de un coche, producto o lugar, el sistema usa **Google Search Grounding** para identificar la Marca, Modelo y Año exacto.
+*   **Visual Search (Modo Lens)**: Si subes la foto de un coche, producto o lugar, el sistema usa el vasto conocimiento multimodal de **Gemini** para identificar la Marca, Modelo y detalles visuales sin necesidad de OCR tradicional.
 *   **Búsqueda Semántica con Razonamiento**: No busca solo por palabras clave.
     *   *Ejemplo*: Si buscas "documentos de deuda", el sistema lee el contenido real y te explica: *"💡 Análisis: Este documento es relevante porque contiene una tabla de amortización..."*.
     *   **Full Context**: Lee el documento completo (50k+ caracteres), no solo resúmenes, para encontrar detalles ocultos.
@@ -18,15 +18,21 @@ Estas son las mejoras "exponenciales" implementadas específicamente para el eve
 
 1.  **Carga por Lotes (Batch Upload)**:
     *   Ahora puedes arrastrar **múltiples archivos** a la vez. El sistema los procesará en cola automáticamente.
-2.  **Chat con tu Documento 💬**:
+2.  **Chat con tu Documento**:
     *   Rompe la barrera estática. Después del análisis, apareció un chat interactivo para hacer preguntas específicas sobre el documento (ej: *"¿Cuánto es el total de la factura?"*).
     *   *Tecnología*: Usa la ventana de contexto de Gemini para leer el documento entero en cada pregunta.
-3.  **Resumen de Audio (Text-to-Speech) 🔊**:
+3.  **Resumen de Audio (Text-to-Speech)**:
     *   Accesibilidad total. Un nuevo botón permite **escuchar** el análisis generado por la IA.
     *   *Ideal para*: Revisión rápida de documentos mientras haces otras tareas.
-4.  **Comparador Inteligente (Cross-Document)** ⚖️:
+4.  **Comparador Inteligente (Cross-Document)**:
     *   ¿Indeciso entre dos contratos? Selecciónalos y la IA generará una **Tabla Comparativa** detallada con diferencias, similitudes y un veredicto final.
     *   *Capacidad*: Analiza múltiples documentos simultáneamente para encontrar discrepancias críticas.
+5.  **Exportación a Excel (Reportes)**:
+    *   Convierte el análisis comparativo de la IA en datos duros. Un botón genera automáticamente un archivo `.xlsx` listo para descargar.
+    *   *Uso Real*: Convierte texto no estructurado (PDFs) en hojas de cálculo estructuradas para auditores.
+6.  **Interfaz Premium (UI Polish)**:
+    *   Rediseño completo visual. Iconografía vectorial (FontAwesome), paleta de colores coherente y eliminación de "emojis de juguete" para una apariencia 100% corporativa.
+    *   *Layout*: Vista previa inteligente que se adapta (1/3 de pantalla) para no saturar la vista.
 
 ## 📂 Estructura del Proyecto
 
@@ -109,14 +115,20 @@ streamlit run frontend/app.py
 
 ## 🔍 Cómo Usar
 
-1.  **Cargar**: Arrastra un PDF o una Foto al recuadro de carga.
-    *   *Si es duplicado, el sistema te avisará inmediatamente.*
-2.  **Analizar**: Haz clic en el botón azul.
-    *   Verás la clasificación, el resumen y el texto extraído.
-    *   Si es una imagen de un objeto, verás su identificación precisa.
-3.  **Buscar**: Ve a la barra lateral izquierda "Búsqueda Semántica".
-    *   Escribe algo complejo como *"¿Qué coche aparece en las fotos?"* o *"contratos mayores a 1000 pesos"*.
-    *   El sistema leerá los documentos y te dará una respuesta razonada.
+1.  **Carga Inteligente (Batch)**:
+    *   Arrastra uno o **múltiples archivos** al área de carga.
+    *   *Seguridad*: El sistema detecta y bloquea duplicados automáticamente.
+2.  **Análisis & Interacción**:
+    *   Presiona **"Analizar Todo"** para procesar la cola.
+    *   Explora las tarjetas de resultados: **Escucha el resumen** (🔊), **Chatea** con el documento (💬) o descarga el **Texto** (💾).
+3.  **Comparación & Exportación** (Premium):
+    *   En la barra lateral, ve a **Comparador Inteligente**.
+    *   Selecciona 2 o más documentos de la lista.
+    *   Clic en **Comparar Selección** para ver la tabla de diferencias generada por IA.
+    *    **¡NUEVO!**: Presiona **"📥 Preparar Excel"** para descargar un reporte profesional editable.
+4.  **Búsqueda Profunda**:
+    *   Usa la barra lateral **"Búsqueda & Razonamiento"**.
+    *   Pregunta en lenguaje natural (ej: *"¿Qué facturas vencen en diciembre?"*).
 
 ---
-**Tecnologías**: Python, FastAPI, Streamlit, Google Gemini 2.5 Flash, FAISS, Sentence-Transformers.
+**Tecnologías**: Python, FastAPI, Streamlit, Google Gemini 2.5 Flash, FAISS, Sentence-Transformers, Pandas, OpenPyXL.

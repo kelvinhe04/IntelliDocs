@@ -259,10 +259,35 @@ async def compare_documents(payload: dict = Body(...)):
              raise HTTPException(status_code=400, detail="No se encontraron suficientes textos válidos para comparar.")
 
         # Llamar a Gemini
-        comparison = gemini_service.compare_documents(docs_data)
-        return {"comparison": comparison}
+        comparison_data = gemini_service.compare_documents(docs_data)
+        return {"comparison": comparison_data}
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/export_comparison_excel")
+async def export_comparison_excel(payload: dict = Body(...)):
+    try:
+        data = payload.get("comparison_table")
+        if not data:
+            raise HTTPException(status_code=400, detail="No hay datos para exportar")
+            
+        import pandas as pd
+        
+        # Crear DataFrame
+        df = pd.DataFrame(data)
+        
+        # Guardar Excel
+        filename = f"comparacion_{uuid.uuid4()}.xlsx"
+        file_path = f"data/uploads/{filename}"
+        
+        # Guardar usando openpyxl engine
+        df.to_excel(file_path, index=False, engine='openpyxl')
+        
+        return {"excel_path": file_path}
+        
+    except Exception as e:
+        print(f"Error Exporting Excel: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

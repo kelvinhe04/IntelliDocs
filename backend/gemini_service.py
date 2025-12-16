@@ -294,17 +294,20 @@ class GeminiService:
         except Exception as e:
             return f"Error al procesar la pregunta: {e}"
 
-    def compare_documents(self, docs_list: list) -> str:
+    def compare_documents(self, docs_list: list) -> dict:
         """
-        Compara múltiples documentos y genera una tabla o análisis comparativo.
+        Compara múltiples documentos y genera una estructura de datos para tabla y análisis.
         docs_list: Lista de diccionarios [{'name': '...', 'text': '...'}]
         """
         try:
             # Construir el prompt con todos los documentos
             docs_context = ""
+            doc_names = []
             for i, doc in enumerate(docs_list):
+                 safe_name = doc.get('name', f'Doc_{i+1}')
+                 doc_names.append(safe_name)
                  docs_context += f"""
-                 --- DOCUMENTO {i+1}: {doc.get('name')} ---
+                 --- DOCUMENTO '{safe_name}' ---
                  {doc.get('text')[:20000]}
                  
                  """
@@ -316,22 +319,29 @@ class GeminiService:
             {docs_context}
             
             INSTRUCCIONES:
-            1. Identifica las similitudes y diferencias clave entre ellos.
-            2. Extrae puntos de datos comparables (fechas, montos, cláusulas, nombres, temas).
-            3. Genera una TABLA COMPARATIVA en Markdown donde las columnas sean los documentos y las filas los criterios de comparación.
-            4. Después de la tabla, añade un breve párrafo de "Conclusión/Veredicto" sobre cuál es mejor o más completo (si aplica).
-            5. IDIOMA: Español.
+            1. Identifica las similitudes y diferencias clave (fechas, montos, cláusulas, nombres, temas).
+            2. Genera una TABLA COMPARATIVA estructurada.
+            3. Escribe una conclusión o análisis de diferencias.
+            4. IDIOMA: Español.
             
-            Formato de salida esperado:
-            ## ⚖️ Tabla Comparativa
-            (Tabla Markdown)
-            
-            ## 💡 Análisis de Diferencias
-            (Breve explicación de las diferencias más críticas)
+            Responde ÚNICAMENTE con este JSON:
+            {{
+                "comparison_table": [
+                    {{
+                        "Criterio": "Nombre del Criterio (ej. Fecha, Monto)",
+                        "{doc_names[0]}": "Valor documento 1",
+                        "{doc_names[1] if len(doc_names)>1 else 'Doc2'}": "Valor documento 2"
+                        // Incluye columnas dinámicas para CADA documento proporcionado
+                    }}
+                ],
+                "analysis_note": "Parrafo breve con el análisis de diferencias más críticas."
+            }}
             """
             
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            response = self.model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            import json
+            return json.loads(response.text)
             
         except Exception as e:
-            return f"Error comparando documentos: {e}"
+            print(f"Error comparando documentos: {e}")
+            return {"comparison_table": [], "analysis_note": f"Error: {str(e)}"}

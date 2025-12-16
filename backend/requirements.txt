@@ -15,3 +15,5 @@ streamlit
 watchdog
 google-generativeai
 gTTS
+pandas
+openpyxl
