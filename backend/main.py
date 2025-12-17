@@ -25,23 +25,24 @@ app.add_middleware(
 )
 
 # Inicializar Servicios (Lazy Loading)
+# Inicializar Servicios (Lazy Loading)
 gemini_service = None
 embedder = None
 vector_store = None
 
-@app.on_event("startup")
-async def startup_event():
+def get_services():
     global gemini_service, embedder, vector_store
-    print("Inicializando Servicios de IA...")
-    # 1. Gemini (Motor de Razonamiento)
-    gemini_service = GeminiService()
-
-    # 2. Embeddings (Motor de Búsqueda - Local es más rápido/barato para vectores)
-    embedder = EmbeddingGenerator()
-
-    # 3. Almacén Vectorial
-    vector_store = VectorStore()
-    print("Servicios de IA Inicializados (Gemini + Vectores Locales).")
+    if gemini_service is None:
+        print("⚡ Cargando Servicios de IA (Primera Ejecución)...")
+        try:
+            gemini_service = GeminiService()
+            embedder = EmbeddingGenerator()
+            vector_store = VectorStore()
+            print("✅ Servicios de IA listos.")
+        except Exception as e:
+            print(f"❌ Error cargando servicios: {e}")
+            raise e
+    return gemini_service, embedder, vector_store
 
 # Asegurar directorios
 UPLOAD_DIR = "data/uploads"
@@ -49,6 +50,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
+    msg_services = get_services()
+    gemini_service, embedder, vector_store = msg_services
     try:
         # 0. Verificar Duplicados
         if vector_store.check_file_exists(file.filename):
@@ -129,6 +132,7 @@ async def analyze_document(file: UploadFile = File(...)):
 
 @app.get("/search")
 async def search_documents(query: str):
+    gemini_service, embedder, vector_store = get_services()
     try:
         # La búsqueda es Híbrida + Rerank con Gemini:
         # 1. Embed query (Modelo Local)
@@ -148,6 +152,7 @@ async def search_documents(query: str):
 
 @app.get("/documents")
 async def get_documents():
+    _, _, vector_store = get_services()
     try:
         return vector_store.list_documents()
     except Exception as e:
@@ -155,6 +160,7 @@ async def get_documents():
 
 @app.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str):
+    _, _, vector_store = get_services()
     try:
         success = vector_store.delete_document(doc_id)
         if not success:
@@ -165,6 +171,7 @@ async def delete_document(doc_id: str):
 
 @app.delete("/documents")
 async def delete_all_documents():
+    _, _, vector_store = get_services()
     try:
         vector_store.clear_all()
         return {"status": "todos_eliminados"}
@@ -173,6 +180,7 @@ async def delete_all_documents():
 
 @app.post("/chat_document")
 async def chat_document(payload: dict = Body(...)):
+    gemini_service, _, _ = get_services()
     try:
         doc_id = payload.get("doc_id")
         query = payload.get("query")
@@ -227,6 +235,7 @@ async def generate_audio(payload: dict = Body(...)):
 
 @app.post("/compare")
 async def compare_documents(payload: dict = Body(...)):
+    gemini_service, _, vector_store = get_services()
     try:
         doc_ids = payload.get("doc_ids") # Lista de IDs o Filenames
         if not doc_ids or len(doc_ids) < 2:
