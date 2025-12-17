@@ -4,7 +4,7 @@ import pickle
 import os
 
 class VectorStore:
-    def __init__(self, index_path="data/faiss_index.bin", metadata_path="data/metadata.pkl", dimension=384):
+    def __init__(self, index_path="data/faiss_index.bin", metadata_path="data/metadata.pkl", dimension=768):
         self.index_path = index_path
         self.metadata_path = metadata_path
         self.dimension = dimension
