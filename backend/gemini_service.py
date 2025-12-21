@@ -8,17 +8,27 @@ import os
 load_dotenv()
 
 # Obtener API Key de forma segura
+# Obtener API Key de forma segura
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
-    raise ValueError("No se encontró GEMINI_API_KEY en las variables de entorno. Por favor verifica tu archivo .env.")
+    print("⚠️ ADVERTENCIA: GEMINI_API_KEY no encontrada. Las funciones de IA fallarán.")
+else:
+    genai.configure(api_key=API_KEY)
 
 class GeminiService:
     def __init__(self):
 
         print("Inicializando Servicio Gemini...")
+        if not API_KEY:
+             print("❌ Error Fatal: Intentando usar GeminiService sin API KEY.")
+             # No lanzamos error aquí para no tumbar todo el server, pero fallará al usarlo
+             self.model = None
+             return
+
+        # genai.configure se llama arriba a nivel módulo si existe la key, 
+        # o podemos asegurarnos aqui.
         genai.configure(api_key=API_KEY)
-        # Usando gemini-2.5-flash como solicitó el usuario
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         
     def summarize(self, text: str) -> str:
